@@ -43,8 +43,7 @@
 #define NO_JUMP 0
 
 
-VSYNCLOOP       EQU      5
-VSYNCLOOPFASTATSTART       EQU      2
+VSYNCLOOP       EQU      1
 
 ; character set definition/helpers
 __:				EQU	$00	;spacja
@@ -160,8 +159,10 @@ preinit
 
 initVariables
 ;; initialise variables per game
-    xor a
-    ld (moveLeftFlag), a
+   
+    ld de, 270            ;;; for now just somewhere in middle of screen
+    ld (currentPlayerLocation), de
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
 gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -174,46 +175,58 @@ waitForTVSync
     ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
     in a, (KEYBOARD_READ_PORT)					; read from io port	
     bit 1, a                            ; Z
+    jp z, moveLeft
+
+
+    ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
+    in a, (KEYBOARD_READ_PORT)					; read from io port		
+    bit 3, a					        ; N
     jp z, moveRight
-    ld a, 0
-    ld (moveRightFlag), a
-
-    ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
-    in a, (KEYBOARD_READ_PORT)					; read from io port		
-    bit 2, a						    ; N
-    jp z, moveLeft	
-    ld a, 0
-    ld (moveLeftFlag), a    
     
-checkJumpKey
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
-    bit 3, a					        ; M
+    bit 2, a						    ; M
     jp z, doJump
-    
-    ld a, 0
-    ld (moveJumpFlag), a
-    
-    jp updateRestOfScreen 
+     
+    jp updateRestOfScreen                       ; if no key pressed continue
 
-moveLeft        ;;; code to trigger a move left
-    ld a, 1
-    ld (moveLeftFlag), a
+moveLeft         
+    ld hl, (currentPlayerLocation)
+    dec hl
+    ld (currentPlayerLocation), hl  
+    jp updateRestOfScreen 
     
-moveRight       ;;; code to trigger a move right
-    ld a, 1
-    ld (moveRightFlag), a
+moveRight       
+    ld hl, (currentPlayerLocation)
+    inc hl
+    ld (currentPlayerLocation), hl  
+    jp updateRestOfScreen 
     
-doJump          ;;; code to trigger a jump
-    ld a, 1
-    ld (moveJumpFlag), a
-    
+doJump    
+    ld de, (currentPlayerLocation)
+    push de
+    pop hl
+    ld de, -33
+    add hl, de
+    push hl
+    pop de
+    ld (currentPlayerLocation), de  
+    jp updateRestOfScreen 
     
 updateRestOfScreen   
+ 
+    
     ld hl, testSprite
-    ld de, 270            ;;; for now just somewhere in middle of screen
+    ld de, (currentPlayerLocation)
     call drawSprite
+       
+skipMove    
+   
+    ld de, 8
+    ld bc, (currentPlayerLocation)
+    call print_number16bits    
     jp gameLoop
+
 
  
 playerWon    
@@ -230,35 +243,38 @@ playerWon
 ;;; hl = start of sprite memory
 ;;; de = offset position in screen memory top left of sprite - no limit check done (yet)
 
-drawSprite    
+drawSprite     
+    
     ld b, 8 
 drawSpriteRowLoop
     push bc    
     ld b, 8
 drawSpriteColLoop
-    ld a, (hl)
-    push hl
+    ld a, (hl)            ;; read character to draw
+    inc hl                ;; move to next character of sprite
+    push hl               ;; save hl will be overwritten for display calc
     
-    ld hl, Display
-    inc hl
+    ld hl, (DF_CC)
     add hl, de            ;; calculate offset to screen location
     inc de                ;; move to next screen column (no check done for edges)
     ld (hl), a            ;; display character on screen
     pop hl                ;; restore hl    
-    inc hl                ;; move to next character of sprite
+
     
     djnz drawSpriteColLoop   
     
-    ;;; add 33 to de to get to next row on screen
-    push hl 
+    ;;; add 25 to de to get to next row on screen
+    push hl               ;; push hl to save it
     push de               ;; transfer de to hl temporarily
     pop hl                ;; transfer de to hl temporarily    
-    ld de, 33
-    add hl, de            ;; hl now contains next row
-    
+    ld de, 25
+    add hl, de            ;; hl now contains next row (de + 25 which is start of next row
+    push hl 
+    pop de                ;; transfer transfer hl back to de
     pop hl                ;; restore hl 
     pop bc                ;; bc outer loop count
     djnz drawSpriteRowLoop
+    
     ret
      
         
@@ -279,7 +295,7 @@ printstring_end
     pop de  ; preserve de
     ret  
     
-print_number16bits    ; bc stores the 16bits, print b then c
+print_number16bits    ; bc stores the 16bits, print b then c, de stores offset from Display
     ld a, b
     call print_number8bits
     ld a, c
@@ -360,19 +376,17 @@ Display        	DEFB $76
                                                                
 Variables:   
 
-moveLeftFlag    DEFB 0
-moveRightFlag   DEFB 0
-moveJumpFlag    DEFB 0
+currentPlayerLocation DEFB 0,0
 
 testSprite
-                DEFB 1,1,1,1,1,1,1,5
-                DEFB 1,1,1,1,1,1,1,5
-                DEFB 1,1,1,1,1,1,1,5
-                DEFB 1,1,1,1,1,1,1,5
-                DEFB 1,1,1,1,1,1,1,5
-                DEFB 1,1,1,1,1,1,1,5
-                DEFB 1,1,1,1,1,1,1,5
-                DEFB 8,8,8,8,8,8,8,8
+                DEFB   7,  3,  3,  3,  3,  3,  3,132
+                DEFB   5,  8,  0,  0,  0,  0,  6,133
+                DEFB   5,  0,  8,  0,  0,  6,  0,133
+                DEFB   5,  0,  0,  8,  6,  0,  0,133
+                DEFB   5,  0,  0,  6,  8,  0,  0,133
+                DEFB   5,  0,  6,  0,  0,  8,  0,133
+                DEFB   5,  6,  0,  0,  0,  0,  8,133
+                DEFB 130,131,131,131,131,131,131,129
 
 VariablesEnd:   DEFB $80
 BasicEnd: 
