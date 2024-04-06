@@ -159,10 +159,15 @@ preinit
 
 initVariables
 ;; initialise variables per game
-   
-    ld de, 270            ;;; for now just somewhere in middle of screen
+    xor a
+    
+    ld (vertAcceleration), a
+    ld de, 501            
     ld (currentPlayerLocation), de
-
+    ld hl, playerSpriteRightMove
+    ld (playerSpritePointer), hl
+    ld a, 5
+    ld (playerXPos), a
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
 gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -191,38 +196,123 @@ waitForTVSync
     jp updateRestOfScreen                       ; if no key pressed continue
 
 moveLeft         
+    ld a, (playerXPos)
+    dec a
+    cp 1
+    jp z, updateRestOfScreen   
+    ld (playerXPos), a
+    
     ld hl, (currentPlayerLocation)
     dec hl
     ld (currentPlayerLocation), hl  
+
+    ld a, (spriteFrameCycle)
+    inc a
+    cp 2
+    jp z, spriteNextLeft     
+    
+    ld (spriteFrameCycle),a    
+    ld hl, playerSpriteLeftMove
+    ld de,64
+    add hl, de
+    ld (playerSpritePointer), hl    
+    jp updateRestOfScreen 
+spriteNextLeft    
+    ld hl, playerSpriteLeftMove
+    ld (playerSpritePointer), hl    
+    xor a
+    ld (spriteFrameCycle), a
     jp updateRestOfScreen 
     
 moveRight       
+    ld a, (playerXPos)
+    inc a
+    cp 22
+    jp z, updateRestOfScreen   
+    ld (playerXPos), a
+    
+    
     ld hl, (currentPlayerLocation)
     inc hl
     ld (currentPlayerLocation), hl  
+    
+    ld a, (spriteFrameCycle)
+    inc a
+    cp 2
+    jp z, spriteNextRight     
+    
+    ld (spriteFrameCycle),a    
+    ld hl, playerSpriteRightMove
+    ld de,64
+    add hl, de
+    ld (playerSpritePointer), hl    
+    jp updateRestOfScreen 
+spriteNextRight    
+    ld hl, playerSpriteRightMove
+    ld (playerSpritePointer), hl    
+    xor a
+    ld (spriteFrameCycle), a
     jp updateRestOfScreen 
     
-doJump    
-    ld de, (currentPlayerLocation)
-    push de
-    pop hl
-    ld de, -33
-    add hl, de
-    push hl
-    pop de
-    ld (currentPlayerLocation), de  
+doJump   
+    ld a, (vertAcceleration)
+    add a, 3
+    ld (vertAcceleration), a 
+    
     jp updateRestOfScreen 
     
 updateRestOfScreen   
- 
+    ; update vertical position of sprite 
+    ld a, (vertAcceleration)
+    ; if vertAcceleration > 0 
+    cp 1
+    jp nz, checkPositionAboveBottom
+    ;; else move player vertically and decrement  vertAcceleration
+    ld de, (currentPlayerLocation)
+    push de
+    pop hl
+    ld de, -33     ; move player up
+    add hl, de
+    push hl
+    pop de
+    ld (currentPlayerLocation), de      
     
-    ld hl, testSprite
+    ld a, (vertAcceleration)
+    dec a
+    ld (vertAcceleration),a     
+
+checkPositionAboveBottom
+
+    ld de, 8
+    ld bc, $bad0
+    call print_number16bits    
+    
+    ld de, $1cf      
+    ld hl, (currentPlayerLocation)
+    sbc hl, de
+    jp nc, checkVertLessZero    ; check result is > 0 
+    jp skipMove
+
+checkVertLessZero
+    ld a, (vertAcceleration)
+    cp 1
+    jp nz, skipMove
+    ; move player down
+    ld de, (currentPlayerLocation)
+    push de
+    pop hl
+    ld de, 33     ; move player down
+    add hl, de
+    push hl
+    pop de
+    ld (currentPlayerLocation), de        
+      
+skipMove    
+    ld hl, (playerSpritePointer)
     ld de, (currentPlayerLocation)
     call drawSprite
-       
-skipMove    
-   
-    ld de, 8
+    
+    ld de, 14
     ld bc, (currentPlayerLocation)
     call print_number16bits    
     jp gameLoop
@@ -242,7 +332,6 @@ playerWon
 
 ;;; hl = start of sprite memory
 ;;; de = offset position in screen memory top left of sprite - no limit check done (yet)
-
 drawSprite     
     
     ld b, 8 
@@ -375,9 +464,35 @@ Display        	DEFB $76
 
                                                                
 Variables:   
+vertAcceleration   DEFB 0
+currentPlayerLocation DEFW 0
 
-currentPlayerLocation DEFB 0,0
-
+playerSpriteRightMove                
+  
+  DEFB	$00, $00, $00, $87, $04, $00, $00, $00, $00, $00, $87, $80,
+  DEFB	$80, $04, $00, $00, $00, $00, $00, $80, $81, $04, $00, $00,
+  DEFB	$00, $00, $00, $02, $07, $00, $00, $00, $00, $00, $00, $81,
+  DEFB	$80, $04, $00, $00, $00, $00, $02, $81, $80, $02, $04, $00,
+  DEFB	$00, $00, $00, $85, $03, $04, $00, $00, $00, $00, $00, $85,
+  DEFB	$04, $82, $00, $00, $00, $00, $00, $87, $04, $00, $00, $00,
+  DEFB	$00, $00, $87, $80, $80, $04, $00, $00, $00, $00, $00, $80,
+  DEFB	$81, $04, $00, $00, $00, $00, $00, $02, $07, $00, $00, $00,
+  DEFB	$00, $00, $00, $81, $80, $04, $00, $00, $00, $00, $85, $85,
+  DEFB	$80, $85, $00, $00, $00, $00, $00, $81, $84, $00, $00, $00,
+  DEFB	$00, $00, $00, $82, $84, $04, $00, $00
+playerSpriteLeftMove
+  DEFB	$00, $00, $00, $87, $04, $00, $00, $00, $00, $00, $87, $80,
+  DEFB	$80, $04, $00, $00, $00, $00, $87, $82, $80, $00, $00, $00,
+  DEFB	$00, $00, $00, $84, $01, $00, $00, $00, $00, $00, $87, $80,
+  DEFB	$82, $00, $00, $00, $00, $87, $01, $80, $82, $01, $00, $00,
+  DEFB	$00, $00, $87, $03, $05, $00, $00, $00, $00, $00, $81, $87,
+  DEFB	$05, $00, $00, $00, $00, $00, $00, $87, $04, $00, $00, $00,
+  DEFB	$00, $00, $87, $80, $80, $04, $00, $00, $00, $00, $87, $82,
+  DEFB	$80, $00, $00, $00, $00, $00, $00, $84, $01, $00, $00, $00,
+  DEFB	$00, $00, $87, $80, $82, $00, $00, $00, $00, $00, $05, $80,
+  DEFB	$05, $05, $00, $00, $00, $00, $00, $07, $82, $00, $00, $00,
+  DEFB	$00, $00, $87, $07, $81, $00, $00, $00
+    
 testSprite
                 DEFB   7,  3,  3,  3,  3,  3,  3,132
                 DEFB   5,  8,  0,  0,  0,  0,  6,133
@@ -387,7 +502,12 @@ testSprite
                 DEFB   5,  0,  6,  0,  0,  8,  0,133
                 DEFB   5,  6,  0,  0,  0,  0,  8,133
                 DEFB 130,131,131,131,131,131,131,129
-
+spriteFrameCycle
+    DEFB 0
+playerSpritePointer
+    DEFW 0 
+playerXPos    
+    DEFB 0   
 VariablesEnd:   DEFB $80
 BasicEnd: 
 #END

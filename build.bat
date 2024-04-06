@@ -1,6 +1,6 @@
 REM build all the assembly code "main" files in this directory
 REM clean up before calling assembler 
-del lander.p
+del jump.p
 del *.lst
 del *.sym
 
