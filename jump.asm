@@ -160,11 +160,10 @@ preinit
 
 initVariables
 ;; initialise variables per game
-
+    xor a
+    ld (moveLeftFlag), a
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
 gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 
 	ld b,VSYNCLOOP
 waitForTVSync	
@@ -176,11 +175,15 @@ waitForTVSync
     in a, (KEYBOARD_READ_PORT)					; read from io port	
     bit 1, a                            ; Z
     jp z, moveRight
+    ld a, 0
+    ld (moveRightFlag), a
 
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 2, a						    ; N
-    jp z, moveLeft							    
+    jp z, moveLeft	
+    ld a, 0
+    ld (moveLeftFlag), a    
     
 checkJumpKey
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
@@ -188,21 +191,75 @@ checkJumpKey
     bit 3, a					        ; M
     jp z, doJump
     
-    ld d, NO_JUMP
-    ld e, 0
+    ld a, 0
+    ld (moveJumpFlag), a
+    
     jp updateRestOfScreen 
 
 moveLeft        ;;; code to trigger a move left
-moveRight       ;;; code to trigger a move right
-doJump          ;;; code to trigger a jump
+    ld a, 1
+    ld (moveLeftFlag), a
     
-updateRestOfScreen
-
-
+moveRight       ;;; code to trigger a move right
+    ld a, 1
+    ld (moveRightFlag), a
+    
+doJump          ;;; code to trigger a jump
+    ld a, 1
+    ld (moveJumpFlag), a
+    
+    
+updateRestOfScreen   
+    ld hl, testSprite
+    ld de, 270            ;;; for now just somewhere in middle of screen
+    call drawSprite
     jp gameLoop
 
  
 playerWon    
+
+
+
+;;;; sprite code
+;;;; our sprites are custom 8 by 8 charactor blocks - so will look fairly big (maybe too big)
+;;;; the generic routines will look at an area of memory stored in hl before the call
+
+;;;; on the zx81 each block is 2 "pixels" horizontally and 2 vertically pre encoded in the sprite memory
+;;;; size of sprite in memory using bit pack is 16 * 16 = 256bits ==>>> 32bytes
+
+;;; hl = start of sprite memory
+;;; de = offset position in screen memory top left of sprite - no limit check done (yet)
+
+drawSprite    
+    ld b, 8 
+drawSpriteRowLoop
+    push bc    
+    ld b, 8
+drawSpriteColLoop
+    ld a, (hl)
+    push hl
+    
+    ld hl, Display
+    inc hl
+    add hl, de            ;; calculate offset to screen location
+    inc de                ;; move to next screen column (no check done for edges)
+    ld (hl), a            ;; display character on screen
+    pop hl                ;; restore hl    
+    inc hl                ;; move to next character of sprite
+    
+    djnz drawSpriteColLoop   
+    
+    ;;; add 33 to de to get to next row on screen
+    push hl 
+    push de               ;; transfer de to hl temporarily
+    pop hl                ;; transfer de to hl temporarily    
+    ld de, 33
+    add hl, de            ;; hl now contains next row
+    
+    pop hl                ;; restore hl 
+    pop bc                ;; bc outer loop count
+    djnz drawSpriteRowLoop
+    ret
      
         
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
@@ -301,7 +358,22 @@ Display        	DEFB $76
                 DEFB  3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,$76  ;Line23
 
                                                                
-Variables:      
+Variables:   
+
+moveLeftFlag    DEFB 0
+moveRightFlag   DEFB 0
+moveJumpFlag    DEFB 0
+
+testSprite
+                DEFB 1,1,1,1,1,1,1,5
+                DEFB 1,1,1,1,1,1,1,5
+                DEFB 1,1,1,1,1,1,1,5
+                DEFB 1,1,1,1,1,1,1,5
+                DEFB 1,1,1,1,1,1,1,5
+                DEFB 1,1,1,1,1,1,1,5
+                DEFB 1,1,1,1,1,1,1,5
+                DEFB 8,8,8,8,8,8,8,8
+
 VariablesEnd:   DEFB $80
 BasicEnd: 
 #END
