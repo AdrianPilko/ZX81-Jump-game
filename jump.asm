@@ -169,6 +169,7 @@ initVariables
     ld hl, Display+1 
     add hl, de
     ld (currentPlayerLocation), hl
+    ld (previousPlayerLocation), hl
     ld hl, playerSpriteRightMove
     ld (playerSpritePointer), hl
     ld a, 5
@@ -183,22 +184,17 @@ waitForTVSync
 	call vsync
 	djnz waitForTVSync
     
-    ld hl, (playerSpritePointer)
-    ;ld hl, testSprite
+    ld hl, blankSprite
+    ld de, (previousPlayerLocation)
+    ld c, 8
+    ld b, 9    
+    call drawSprite 
+    
+    ld hl, (playerSpritePointer)    
     ld de, (currentPlayerLocation)
-    ;ld de, Display+1+37
     ld c, 8
     ld b, 8    
-    call drawSprite    
-    
-    
-    ; ld de, 8
-    ; ld bc, Display+1+37
-    ; call print_number16bits    
-    ; ld de, 14
-    ; ld bc, testSprite
-    ; call print_number16bits        
-    ; jp gameLoop
+    call drawSprite 
     
     ;; read keys
     ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
@@ -225,8 +221,9 @@ moveLeft
     cp 1
     jp z, updateRestOfScreen   
     ld (playerXPos), a
-    
+        
     ld hl, (currentPlayerLocation)
+    ld (previousPlayerLocation), hl
     dec hl
     ld (currentPlayerLocation), hl  
 
@@ -257,6 +254,7 @@ moveRight
     
     
     ld hl, (currentPlayerLocation)
+    ld (previousPlayerLocation), hl
     inc hl
     ld (currentPlayerLocation), hl  
     
@@ -284,7 +282,7 @@ doJump      ; triggered when jump key pressed just sets the YSpeed to 4
     cp 0
     jp nz, skipDoJump
     
-    ld a, 3
+    ld a, 6
     ld (YSpeed), a         
     jp updateRestOfScreen
     ; update vertical position of sprite using YSpeed, which gets decreemnted by 1 each loop    
@@ -298,6 +296,7 @@ updateRestOfScreen
     ld b, 2
 jumpUpLoop    
     ld hl, (currentPlayerLocation)
+    ld (previousPlayerLocation), hl
     ld de, -33 
     add hl, de
     ld (currentPlayerLocation), hl  
@@ -318,8 +317,9 @@ checkYPosition  ; need to bring player back to ground
     ld a, (playerYPos)
     dec a
     cp 0
-    jp z, skipLandPlayer
+    jp z, skipLandPlayer    
     ld hl, (currentPlayerLocation)
+    ld (previousPlayerLocation), hl
     ld de, 33 
     add hl, de
     ld (currentPlayerLocation), hl
@@ -331,16 +331,21 @@ skipLandPlayer
       
 skipMove       
 
-    ld de, 20
-    ld a, (YSpeed)
-    call print_number8bits  
-    ld de, 14
-    ld a, (playerYPos)
-    call print_number8bits 
+    ;ld de, 20
+    ;ld a, (YSpeed)
+    ;call print_number8bits  
+    ;ld de, 14
+    ;ld a, (playerYPos)
+    ;call print_number8bits 
     
     ld de, 8
-    ld bc, (currentPlayerLocation)
+    ld bc, (previousPlayerLocation)    
     call print_number16bits    
+    ld de, 14
+    ld bc, (currentPlayerLocation)    
+    call print_number16bits    
+        
+    
          
     jp gameLoop
 
@@ -357,6 +362,7 @@ playerWon
 ;;;; on the zx81 each block is 2 "pixels" horizontally and 2 vertically pre encoded in the sprite memory
 ;;;; size of sprite in memory using bit pack is 16 * 16 = 256bits ==>>> 32bytes
 
+
 ;;; hl = start of sprite memory
 ;;; de = offset position in screen memory top left of sprite - no limit check done (yet)
 ;;; c  = width of sprite (normally 8 to keep things "simple")
@@ -367,7 +373,7 @@ drawSprite
     ld b, 0               ;; just doing columns in c so zero b
     ldir                  ;; ldir repeats ld (de), (hl) until bc = 0
     pop de
-    ex de, hl
+    ex de, hl    
     ld bc, 33             ;; move next write position to next row
     add hl, bc
     ex de, hl
@@ -477,7 +483,8 @@ YSpeed
     DEFB 0
 currentPlayerLocation 
     DEFW 0
-
+previousPlayerLocation    
+    DEFW 0
 ;; 336 bytes of sprite data packed, each sprite 8*8 characters and 3 frames right then left
 playerSpriteRightMove                
   DEFB	    $00, $00, $87, $80, $82, $00, $00, $00, $00, $00, $85, $80,
@@ -516,16 +523,20 @@ playerSpriteLeftMove
 
     
    
+; used to clear current location before move    
+blankSprite
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0    
     
-testSprite
-                DEFB   0,  0,  0,  0,  0,  0,  0,  0
-                DEFB   0,  7,  3,  3,  3,  3,132,  0
-                DEFB   0,  5,  8,  0,  0,  6,133,  0
-                DEFB   0,  5,  0,  8,  6,  0,133,  0
-                DEFB   0,  5,  0,  6,  8,  0,133,  0
-                DEFB   0,  5,  6,  0,  0,  8,133,  0
-                DEFB   0,130,131,131,131,131,129,  0
-                DEFB   0,  0,  0,  0,  0,  0,  0,  0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0    
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0    
+    
 spriteFrameCycle
     DEFB 0
 playerSpritePointer
