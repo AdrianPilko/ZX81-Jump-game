@@ -1,4 +1,5 @@
 ; Copyright (c) 2024 Adrian Pilkington
+; Copyright (c) 2024 Adrian Pilkington
 
 ; Permission is hereby granted, free of charge, to any person obtaining a copy
 ; of this software and associated documentation files (the "Software"), to deal
@@ -159,8 +160,8 @@ preinit
 
 initVariables
 ;; initialise variables per game
-    xor a
     
+    xor a  ; fastest way to zero register a
     ld (vertAcceleration), a
     ld de, 500    
     ld hl, Display+1 
@@ -170,6 +171,8 @@ initVariables
     ld (playerSpritePointer), hl
     ld a, 5
     ld (playerXPos), a
+    xor a  
+    ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
 gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -273,63 +276,73 @@ spriteNextRight
     ld (spriteFrameCycle), a
     jp updateRestOfScreen 
     
-doJump   
+doJump      
     ld a, (vertAcceleration)
-    add a, 3
+    add a, 2
     ld (vertAcceleration), a 
     
     jp updateRestOfScreen 
     
 updateRestOfScreen   
     ; update vertical position of sprite 
-    ld a, (vertAcceleration)
+    ld a, (vertAcceleration)    
     ; if vertAcceleration > 0 
-    cp 1
-    jp nz, checkPositionAboveBottom
+    cp 0
+    jp nc, checkYPosition
     ;; else move player vertically and decrement  vertAcceleration
-    ld de, (currentPlayerLocation)
-    push de
-    pop hl
-    ld de, -33     ; move player up
-    add hl, de
-    push hl
-    pop de
-    ld (currentPlayerLocation), de      
+  
+    ; ld a, (playerYPos)      
+    ; cp 0
+    ; jp nz, checkVertLessZero    ; check result is > 0    
+    ; jp skipMove
     
-    ld a, (vertAcceleration)
-    dec a
-    ld (vertAcceleration),a     
-
-checkPositionAboveBottom
-
-    ld de, 8
-    ld bc, $bad0
-    call print_number16bits    
-    
-    ld de, $1cf      
     ld hl, (currentPlayerLocation)
-    sbc hl, de
-    jp nc, checkVertLessZero    ; check result is > 0 
-    jp skipMove
-
-checkVertLessZero
-    ld a, (vertAcceleration)
-    cp 1
-    jp nz, skipMove
-    ; move player down
-    ld de, (currentPlayerLocation)
-    push de
-    pop hl
-    ld de, 33     ; move player down
+    ld de, -33 
     add hl, de
-    push hl
-    pop de
-    ld (currentPlayerLocation), de        
+    ld (currentPlayerLocation), hl
+    ld a, (vertAcceleration)    
+    dec a
+    ld a, (vertAcceleration)    
+    ; if vertAcceleration > 0 
+    cp 0
+    ;; at this point the acceleration is zero and should go negative
+    jp nz, negateAcceleraation 
+    ld (vertAcceleration),a     
+    ld a, (playerYPos)
+    inc a
+    ld (playerYPos), a 
+    jp skipMove
+negateAcceleraation
+    ld a, -3
+    ld (vertAcceleration),a     
+    jp skipMove  ; already moved!
+
+
+checkYPosition  ; need to bring player back to ground
+    ld a, (playerYPos)
+    cp 0    ;;; this will need to be a compare with whatever platform/ladder player is on
+    jp z, skipMove
+    dec a
+    ld (playerYPos), a 
+    ld a, (vertAcceleration)
+    cp 0
+    jp nz, skipMove
+    inc a
+    ld (vertAcceleration), a 
+    ; move player down one row
+    ld hl, (currentPlayerLocation)
+    ld de, 33 
+    add hl, de
+    ld (currentPlayerLocation), hl
       
 skipMove       
-    ld de, 14
+    ld de, 8
     ld bc, (currentPlayerLocation)
     call print_number16bits    
+    
+    ld de, 14
+    ld a, (vertAcceleration)
+    call print_number8bits        
     jp gameLoop
 
 
@@ -518,6 +531,8 @@ playerSpritePointer
     DEFW 0 
 playerXPos    
     DEFB 0   
+playerYPos    
+    DEFB 0       
 VariablesEnd:   DEFB $80
 BasicEnd: 
 #END
