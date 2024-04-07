@@ -43,7 +43,7 @@
 #define NO_JUMP 0
 
 
-VSYNCLOOP       EQU      4
+VSYNCLOOP       EQU      5
 
 ; character set definition/helpers
 __:				EQU	$00	;spacja
@@ -162,8 +162,10 @@ initVariables
     xor a
     
     ld (vertAcceleration), a
-    ld de, 369            
-    ld (currentPlayerLocation), de
+    ld de, 500    
+    ld hl, Display+1 
+    add hl, de
+    ld (currentPlayerLocation), hl
     ld hl, playerSpriteRightMove
     ld (playerSpritePointer), hl
     ld a, 5
@@ -177,8 +179,21 @@ waitForTVSync
 	djnz waitForTVSync
     
     ld hl, (playerSpritePointer)
+    ;ld hl, testSprite
     ld de, (currentPlayerLocation)
+    ;ld de, Display+1+37
+    ld c, 8
+    ld b, 8    
     call drawSprite    
+    
+    
+    ; ld de, 8
+    ; ld bc, Display+1+37
+    ; call print_number16bits    
+    ; ld de, 14
+    ; ld bc, testSprite
+    ; call print_number16bits        
+    ; jp gameLoop
     
     ;; read keys
     ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
@@ -212,12 +227,12 @@ moveLeft
 
     ld a, (spriteFrameCycle)
     inc a
-    cp 4
+    cp 3
     jp z, spriteNextLeft     
     
     ld (spriteFrameCycle),a    
     ld hl, playerSpriteLeftMove
-    ld de,96     ; 12 by 8 blocks
+    ld de,64     ; 8 by 8 blocks
     add hl, de
     ld (playerSpritePointer), hl    
     jp updateRestOfScreen 
@@ -242,12 +257,12 @@ moveRight
     
     ld a, (spriteFrameCycle)
     inc a
-    cp 4
+    cp 3
     jp z, spriteNextRight     
     
     ld (spriteFrameCycle),a    
     ld hl, playerSpriteRightMove
-    ld de,96
+    ld de,64
     add hl, de
     ld (playerSpritePointer), hl    
     jp updateRestOfScreen 
@@ -332,38 +347,20 @@ playerWon
 
 ;;; hl = start of sprite memory
 ;;; de = offset position in screen memory top left of sprite - no limit check done (yet)
-drawSprite     
-    
-    ld b, 12 
-drawSpriteRowLoop
+;;; c  = width of sprite (normally 8 to keep things "simple")
+;;; b  = rows in sprite (normally 8 to keep things "simple")
+drawSprite         
     push bc    
-    ld b, 8
-drawSpriteColLoop
-    ld a, (hl)            ;; read character to draw
-    inc hl                ;; move to next character of sprite
-    push hl               ;; save hl will be overwritten for display calc
-    
-    ld hl, (DF_CC)
-    add hl, de            ;; calculate offset to screen location
-    inc de                ;; move to next screen column (no check done for edges)
-    ld (hl), a            ;; display character on screen
-    pop hl                ;; restore hl    
-
-    
-    djnz drawSpriteColLoop   
-    
-    ;;; add 25 to de to get to next row on screen
-    push hl               ;; push hl to save it
-    push de               ;; transfer de to hl temporarily
-    pop hl                ;; transfer de to hl temporarily    
-    ld de, 25
-    add hl, de            ;; hl now contains next row (de + 25 which is start of next row
-    push hl 
-    pop de                ;; transfer transfer hl back to de
-    pop hl                ;; restore hl 
-    pop bc                ;; bc outer loop count
-    djnz drawSpriteRowLoop
-    
+    push de
+    ld b, 0               ;; just doing columns in c so zero b
+    ldir                  ;; ldir repeats ld (de), (hl) until bc = 0
+    pop de
+    ex de, hl
+    ld bc, 33             ;; move next write position to next row
+    add hl, bc
+    ex de, hl
+    pop bc
+    djnz drawSprite    
     ret
      
         
@@ -467,63 +464,54 @@ Variables:
 vertAcceleration   DEFB 0
 currentPlayerLocation DEFW 0
 
+;; 336 bytes of sprite data packed, each sprite 8*8 characters and 3 frames right then left
 playerSpriteRightMove                
-  
-  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-  DEFB		$80, $80, $00, $00, $00, $00, $00, $02, $80, $80, $01, $00,
-  DEFB		$00, $00, $00, $00, $80, $81, $04, $00, $00, $00, $00, $00,
-  DEFB		$81, $82, $00, $00, $00, $00, $00, $85, $84, $07, $05, $00,
-  DEFB		$00, $00, $00, $85, $85, $05, $05, $00, $00, $00, $00, $00,
-  DEFB		$85, $05, $00, $00, $00, $00, $00, $00, $05, $85, $00, $00,
-  DEFB		$00, $00, $00, $00, $05, $85, $00, $00, $00, $00, $00, $00,
-  DEFB		$82, $85, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-  DEFB		$85, $80, $05, $00, $00, $00, $00, $00, $84, $80, $07, $00,
-  DEFB		$00, $00, $00, $00, $85, $82, $82, $00, $00, $00, $00, $00,
-  DEFB		$87, $80, $04, $00, $00, $00, $00, $00, $07, $80, $84, $00,
-  DEFB		$00, $00, $00, $85, $00, $80, $85, $00, $00, $00, $00, $00,
-  DEFB		$00, $80, $00, $00, $00, $00, $00, $00, $87, $01, $05, $00,
-  DEFB		$00, $00, $00, $00, $05, $00, $85, $00, $00, $00, $00, $00,
-  DEFB		$82, $00, $85, $04, $00, $00, $00, $00, $00, $00, $00, $00,
-  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-  DEFB		$00, $80, $80, $00, $00, $00, $00, $00, $02, $80, $80, $01,
-  DEFB		$00, $00, $00, $00, $00, $80, $81, $04, $00, $00, $00, $00,
-  DEFB		$00, $81, $82, $00, $00, $00, $00, $00, $85, $84, $07, $05,
-  DEFB		$00, $00, $00, $00, $85, $85, $05, $85, $00, $00, $00, $00,
-  DEFB		$00, $85, $05, $00, $00, $00, $00, $00, $00, $85, $85, $00,
-  DEFB      $00, $00, $00, $00, $00, $06, $85, $00, $00, $00, $00, $00,
-  DEFB      $00, $82, $85, $04, $00, $00, $00, $00, $00, $00, $00, $00
-playerSpriteLeftMove
-	DEFB    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $80, $80,
-  DEFB		$00, $00, $00, $00, $00, $02, $80, $80, $01, $00, $00, $00,
-  DEFB		$00, $87, $82, $80, $00, $00, $00, $00, $00, $00, $81, $82,
-  DEFB		$00, $00, $00, $00, $00, $85, $84, $07, $05, $00, $00, $00,
-  DEFB		$00, $85, $85, $05, $05, $00, $00, $00, $00, $00, $85, $05,
-  DEFB		$00, $00, $00, $00, $00, $00, $05, $85, $00, $00, $00, $00,
-  DEFB		$00, $00, $05, $85, $00, $00, $00, $00, $00, $87, $05, $81,
-  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $85, $80, $05,
-  DEFB		$00, $00, $00, $00, $00, $84, $80, $07, $00, $00, $00, $00,
-  DEFB		$00, $81, $81, $05, $00, $00, $00, $00, $00, $87, $80, $04,
-  DEFB		$00, $00, $00, $00, $00, $07, $80, $84, $00, $00, $00, $00,
-	DEFB    $00, $05, $80, $00, $05, $00, $00, $00, $00, $00, $80, $00,
-  DEFB	  $00, $00, $00, $00, $00, $85, $02, $04, $00, $00, $00, $00,
-  DEFB	  $00, $05, $00, $85, $00, $00, $00, $00, $87, $05, $00, $81,
-  DEFB    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
-  DEFB	  $00, $00, $00, $00, $00, $80, $80, $00, $02, $80, $80, $01,
-  DEFB	  $87, $82, $80, $00, $00, $81, $82, $00, $85, $84, $07, $05,
-  DEFB	  $05, $85, $05, $05, $00, $85, $05, $00, $00, $05, $05, $00,
-  DEFB	  $00, $05, $86, $00, $87, $05, $81, $00, $00, $00, $00, $00
+  DEFB	    $00, $00, $87, $80, $82, $00, $00, $00, $00, $00, $85, $80,
+  DEFB      $81, $04, $00, $00, $00, $00, $02, $80, $07, $00, $00, $00,
+  DEFB	    $00, $00, $87, $80, $04, $00, $00, $00, $00, $00, $86, $80,
+  DEFB	    $02, $04, $00, $00, $00, $00, $87, $03, $04, $00, $00, $00,
+  DEFB	    $00, $00, $85, $00, $86, $00, $00, $00, $00, $00, $85, $04,
+  DEFB		$02, $01, $00, $00, $00, $00, $00, $87, $80, $82, $00, $00,
+  DEFB  	$00, $00, $00, $85, $80, $81, $04, $00, $00, $00, $00, $02,
+  DEFB		$80, $07, $00, $00, $00, $00, $00, $87, $80, $04, $00, $00,
+  DEFB		$00, $00, $87, $01, $80, $85, $00, $00, $00, $00, $00, $00,
+  DEFB		$07, $06, $00, $00, $00, $00, $00, $06, $00, $05, $00, $00,
+  DEFB		$00, $00, $00, $86, $00, $82, $00, $00, $00, $00, $87, $80,
+  DEFB  	$82, $00, $00, $00, $00, $00, $85, $80, $81, $04, $00, $00,
+  DEFB		$00, $00, $02, $80, $07, $00, $00, $00, $00, $00, $87, $80,
+  DEFB		$04, $00, $00, $00, $00, $00, $05, $80, $85, $00, $00, $00,
+  DEFB		$00, $00, $86, $03, $06, $00, $00, $00, $00, $00, $85, $00, 
+  DEFB		$05, $00, $00, $00, $00, $00, $81, $00, $82, $00, $00, $00,
+playerSpriteLeftMove    
+  DEFB  	$00, $00, $81, $80, $04, $00, $00, $00, $00, $87, $82, $80,
+  DEFB		$05, $00, $00, $00, $00, $00, $84, $80, $01, $00, $00, $00,
+  DEFB		$00, $00, $87, $80, $04, $00, $00, $00, $00, $00, $05, $80,
+  DEFB		$85, $00, $00, $00, $00, $00, $86, $03, $06, $00, $00, $00,
+  DEFB		$00, $00, $85, $00, $05, $00, $00, $00, $00, $00, $81, $00,
+  DEFB  	$82, $00, $00, $00, $00, $00, $00, $81, $80, $04, $00, $00,
+  DEFB		$00, $00, $87, $82, $80, $05, $00, $00, $00, $00, $00, $84,
+  DEFB		$80, $01, $00, $00, $00, $00, $00, $87, $80, $04, $00, $00,
+  DEFB		$00, $00, $87, $01, $80, $06, $00, $00, $00, $00, $00, $87,
+  DEFB		$03, $04, $00, $00, $00, $00, $00, $06, $00, $05, $00, $00,
+  DEFB  	$00, $00, $02, $01, $87, $05, $00, $00, $00, $00, $81, $80,
+  DEFB		$04, $00, $00, $00, $00, $87, $82, $80, $05, $00, $00, $00,
+  DEFB		$00, $00, $84, $80, $01, $00, $00, $00, $00, $00, $87, $80,
+  DEFB		$04, $00, $00, $00, $00, $00, $05, $80, $02, $04, $00, $00,
+  DEFB	    $00, $00, $86, $84, $00, $00, $00, $00, $00, $00, $85, $00,
+  DEFB  	$86, $00, $00, $00, $00, $00, $81, $00, $06, $00, $00, $00
+
+    
+   
     
 testSprite
-                DEFB   7,  3,  3,  3,  3,  3,  3,132
-                DEFB   5,  8,  0,  0,  0,  0,  6,133
-                DEFB   5,  0,  8,  0,  0,  6,  0,133
-                DEFB   5,  0,  0,  8,  6,  0,  0,133
-                DEFB   5,  0,  0,  6,  8,  0,  0,133
-                DEFB   5,  0,  6,  0,  0,  8,  0,133
-                DEFB   5,  6,  0,  0,  0,  0,  8,133
-                DEFB 130,131,131,131,131,131,131,129
+                DEFB   0,  0,  0,  0,  0,  0,  0,  0
+                DEFB   0,  7,  3,  3,  3,  3,132,  0
+                DEFB   0,  5,  8,  0,  0,  6,133,  0
+                DEFB   0,  5,  0,  8,  6,  0,133,  0
+                DEFB   0,  5,  0,  6,  8,  0,133,  0
+                DEFB   0,  5,  6,  0,  0,  8,133,  0
+                DEFB   0,130,131,131,131,131,129,  0
+                DEFB   0,  0,  0,  0,  0,  0,  0,  0
 spriteFrameCycle
     DEFB 0
 playerSpritePointer
