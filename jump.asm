@@ -160,9 +160,11 @@ preinit
 
 initVariables
 ;; initialise variables per game
+    ld a, 10
+    ld (jumpDelayBackoff), a
     
     xor a  ; fastest way to zero register a
-    ld (vertAcceleration), a
+    ld (YSpeed), a
     ld de, 500    
     ld hl, Display+1 
     add hl, de
@@ -171,7 +173,7 @@ initVariables
     ld (playerSpritePointer), hl
     ld a, 5
     ld (playerXPos), a
-    xor a  
+    ld a, 1
     ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
 gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -276,73 +278,70 @@ spriteNextRight
     ld (spriteFrameCycle), a
     jp updateRestOfScreen 
     
-doJump      
-    ld a, (vertAcceleration)
-    add a, 2
-    ld (vertAcceleration), a 
-    
-    jp updateRestOfScreen 
-    
-updateRestOfScreen   
-    ; update vertical position of sprite 
-    ld a, (vertAcceleration)    
-    ; if vertAcceleration > 0 
+doJump      ; triggered when jump key pressed just sets the YSpeed to 4    
+    ld a, (playerYPos)  ; can only jump again if on ground = 1
+    dec a
     cp 0
-    jp nc, checkYPosition
-    ;; else move player vertically and decrement  vertAcceleration
-  
-    ; ld a, (playerYPos)      
-    ; cp 0
-    ; jp nz, checkVertLessZero    ; check result is > 0    
-    ; jp skipMove
+    jp nz, skipDoJump
     
+    ld a, 3
+    ld (YSpeed), a         
+    jp updateRestOfScreen
+    ; update vertical position of sprite using YSpeed, which gets decreemnted by 1 each loop    
+skipDoJump        
+    jp updateRestOfScreen
+
+updateRestOfScreen    
+    ld a, (YSpeed)
+    cp 0
+    jp z, skipDecrmentYSpeed        
+    ld b, 2
+jumpUpLoop    
     ld hl, (currentPlayerLocation)
     ld de, -33 
     add hl, de
-    ld (currentPlayerLocation), hl
-    ld a, (vertAcceleration)    
-    dec a
-    ld a, (vertAcceleration)    
-    ; if vertAcceleration > 0 
-    cp 0
-    ;; at this point the acceleration is zero and should go negative
-    jp nz, negateAcceleraation 
-    ld (vertAcceleration),a     
+    ld (currentPlayerLocation), hl  
+    
     ld a, (playerYPos)
     inc a
-    ld (playerYPos), a 
-    jp skipMove
-negateAcceleraation
-    ld a, -3
-    ld (vertAcceleration),a     
-    jp skipMove  ; already moved!
+    ld (playerYPos), a    
+    djnz jumpUpLoop  
+    
+    ld a, (YSpeed)
+    dec a
+    ld (YSpeed),a
 
-
+skipDecrmentYSpeed
+   
 checkYPosition  ; need to bring player back to ground
+
     ld a, (playerYPos)
-    cp 0    ;;; this will need to be a compare with whatever platform/ladder player is on
-    jp z, skipMove
     dec a
-    ld (playerYPos), a 
-    ld a, (vertAcceleration)
     cp 0
-    jp nz, skipMove
-    inc a
-    ld (vertAcceleration), a 
-    ; move player down one row
+    jp z, skipLandPlayer
     ld hl, (currentPlayerLocation)
     ld de, 33 
     add hl, de
     ld (currentPlayerLocation), hl
+    
+    ld (playerYPos), a
+    
+skipLandPlayer
+    
       
 skipMove       
+
+    ld de, 20
+    ld a, (YSpeed)
+    call print_number8bits  
+    ld de, 14
+    ld a, (playerYPos)
+    call print_number8bits 
+    
     ld de, 8
     ld bc, (currentPlayerLocation)
     call print_number16bits    
-    
-    ld de, 14
-    ld a, (vertAcceleration)
-    call print_number8bits        
+         
     jp gameLoop
 
 
@@ -474,8 +473,10 @@ Display        	DEFB $76
 
                                                                
 Variables:   
-vertAcceleration   DEFB 0
-currentPlayerLocation DEFW 0
+YSpeed   
+    DEFB 0
+currentPlayerLocation 
+    DEFW 0
 
 ;; 336 bytes of sprite data packed, each sprite 8*8 characters and 3 frames right then left
 playerSpriteRightMove                
@@ -532,7 +533,9 @@ playerSpritePointer
 playerXPos    
     DEFB 0   
 playerYPos    
-    DEFB 0       
+    DEFB 0  
+jumpDelayBackoff    
+    DEFB 0
 VariablesEnd:   DEFB $80
 BasicEnd: 
 #END
