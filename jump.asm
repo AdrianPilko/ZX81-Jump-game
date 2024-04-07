@@ -44,7 +44,7 @@
 #define NO_JUMP 0
 
 
-VSYNCLOOP       EQU      5
+VSYNCLOOP       EQU      3
 
 ; character set definition/helpers
 __:				EQU	$00	;spacja
@@ -184,10 +184,13 @@ waitForTVSync
 	call vsync
 	djnz waitForTVSync
     
+    ld hl, (currentPlayerLocation)
+    ld de, -33
+    add hl, de
+    ex de, hl
     ld hl, blankSprite
-    ld de, (previousPlayerLocation)
-    ld c, 8
-    ld b, 9    
+    ld c, 8    
+    ld b, 10
     call drawSprite 
     
     ld hl, (playerSpritePointer)    
@@ -237,6 +240,12 @@ moveLeft
     ld de,64     ; 8 by 8 blocks
     add hl, de
     ld (playerSpritePointer), hl    
+
+    ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
+    in a, (KEYBOARD_READ_PORT)					; read from io port		
+    bit 2, a						    ; M
+    jp z, doJump
+    
     jp updateRestOfScreen 
 spriteNextLeft    
     ld hl, playerSpriteLeftMove
@@ -268,6 +277,12 @@ moveRight
     ld de,64
     add hl, de
     ld (playerSpritePointer), hl    
+
+    ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
+    in a, (KEYBOARD_READ_PORT)					; read from io port		
+    bit 2, a						    ; M
+    jp z, doJump
+    
     jp updateRestOfScreen 
 spriteNextRight    
     ld hl, playerSpriteRightMove
@@ -293,10 +308,10 @@ updateRestOfScreen
     ld a, (YSpeed)
     cp 0
     jp z, skipDecrmentYSpeed        
-    ld b, 2
+    ld b, 2 
 jumpUpLoop    
     ld hl, (currentPlayerLocation)
-    ld (previousPlayerLocation), hl
+    ld (previousPlayerLocation), hl      
     ld de, -33 
     add hl, de
     ld (currentPlayerLocation), hl  
@@ -312,12 +327,11 @@ jumpUpLoop
 
 skipDecrmentYSpeed
    
-checkYPosition  ; need to bring player back to ground
-
+checkYPosition  ; need to bring player back to ground   
     ld a, (playerYPos)
     dec a
     cp 0
-    jp z, skipLandPlayer    
+    jp z, skipLandPlayer        
     ld hl, (currentPlayerLocation)
     ld (previousPlayerLocation), hl
     ld de, 33 
@@ -338,12 +352,12 @@ skipMove
     ;ld a, (playerYPos)
     ;call print_number8bits 
     
-    ld de, 8
-    ld bc, (previousPlayerLocation)    
-    call print_number16bits    
-    ld de, 14
-    ld bc, (currentPlayerLocation)    
-    call print_number16bits    
+    ; ld de, 8
+    ; ld bc, (previousPlayerLocation)    
+    ; call print_number16bits    
+    ; ld de, 14
+    ; ld bc, (currentPlayerLocation)    
+    ; call print_number16bits    
         
     
          
@@ -533,9 +547,19 @@ blankSprite
     DEFB   0,  0,  0,  0,  0,  0,  0,  0
     DEFB   0,  0,  0,  0,  0,  0,  0,  0
     DEFB   0,  0,  0,  0,  0,  0,  0,  0    
-    
-    DEFB   0,  0,  0,  0,  0,  0,  0,  0    
-    DEFB   0,  0,  0,  0,  0,  0,  0,  0    
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0
+    DEFB   0,  0,  0,  0,  0,  0,  0,  0      
+blockFilled    ;8*10
+    DEFB   8,  8,  8,  8,  8,  8,  8,  8
+    DEFB   8,  8,  8,  8,  8,  8,  8,  8
+    DEFB   8,  8,  8,  8,  8,  8,  8,  8
+    DEFB   8,  8,  8,  8,  8,  8,  8,  8
+    DEFB   8,  8,  8,  8,  8,  8,  8,  8
+    DEFB   8,  8,  8,  8,  8,  8,  8,  8
+    DEFB   8,  8,  8,  8,  8,  8,  8,  8
+    DEFB   8,  8,  8,  8,  8,  8,  8,  8
+    DEFB   8,  8,  8,  8,  8,  8,  8,  8     
+    DEFB   8,  8,  8,  8,  8,  8,  8,  8    
     
 spriteFrameCycle
     DEFB 0
