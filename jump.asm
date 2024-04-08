@@ -180,6 +180,8 @@ initVariables
     ld (playerXPos), a
     ld a, 2
     ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most
+    ld a, 2
+    ld (compareValueGround), a
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
 gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -197,18 +199,36 @@ waitForTVSync
     ld (roomJustEnteredFlag),a
     
 skipRoomDraw        
+    ld a, (playerXPos)   ; calculate effective ground Y position if platform
+    cp 15  ;;; for now check that it's greater than 15 - we need to setup proper platforms eventually
+    jp c, checkGroundtestFailed    ; less than
+    jp z, checkGroundtestFailed    ; equal to
+
+checkGroundtestSucceeded
+    ld a, 6   ; this will have to be set to the actual platform height  - eventually
+    ld (comparePlatformOrGround), a
+    jp continueGroundProc
+checkGroundtestFailed
+    ld a, (compareValueGround)
+    ld (comparePlatformOrGround), a
+    
+continueGroundProc
+    ld c, 7     ; width
+    ld b, 9     ; rows 
+    ld de, (comparePlatformOrGround)
+    ld a, (playerYPos)
+    cp e            
+    jp c, playerLowerThanPlatorm
+    jp z, playerLowerThanPlatorm
+    ld b, 10    ; set rows to 10 if not on platform or ground
+playerLowerThanPlatorm
+skipBlankSpriteBigger    
     ld hl, (currentPlayerLocation)
     ld de, -33
     add hl, de
     ex de, hl
     ld hl, blankSprite
-    ld c, 7
-    ld b, 9
-    ld a, (playerYPos)
-    cp 2
-    jp z, skipBlankSpriteBigger
-    ld b, 10
-skipBlankSpriteBigger    
+
     call drawSprite 
     
     ld hl, (playerSpritePointer)    
@@ -309,17 +329,17 @@ spriteNextRight
     ld (spriteFrameCycle), a
     jp updateRestOfScreen 
     
-doJump      ; triggered when jump key pressed just sets the YSpeed to 4    
-    ld a, (playerYPos)  ; can only jump again if on ground = 1
-    dec a
-    cp 1
-    jp nz, skipDoJump
-    
+doJump      ; triggered when jump key pressed just sets the YSpeed to 4      
+    ld a, (playerYPos)
+    ld de, (comparePlatformOrGround)
+    cp e         
+    jp c, doJumptestSucceeded    ; less than
+    jp z, doJumptestSucceeded    ; equal to
+skipDoJump        
+    jp updateRestOfScreen
+doJumptestSucceeded    
     ld a, 6
     ld (YSpeed), a         
-    jp updateRestOfScreen
-    ; update vertical position of sprite using YSpeed, which gets decreemnted by 1 each loop    
-skipDoJump        
     jp updateRestOfScreen
 
 updateRestOfScreen    
@@ -346,19 +366,27 @@ jumpUpLoop
 skipDecrmentYSpeed
    
 checkYPosition  ; need to bring player back to ground   
+
     ld a, (playerYPos)
-    dec a
-    cp 1
-    jp z, skipLandPlayer        
+    ld de, (comparePlatformOrGround)
+    cp e         
+    jp c, skipLandPlayer    ; less than
+    jp z, skipLandPlayer    ; equal to
+
+checkYPositiontestSucceeded
     ld hl, (currentPlayerLocation)
     ld (previousPlayerLocation), hl
     ld de, 33 
     add hl, de
     ld (currentPlayerLocation), hl
-    
+    ld a, (playerYPos)    
+    dec a
     ld (playerYPos), a
     
-skipLandPlayer
+skipLandPlayer        
+    
+    
+ 
     
       
 skipMove                
@@ -406,6 +434,19 @@ drawColZero
     inc hl    
     inc hl
     djnz drawColZero    
+    
+    ld de, (RoomConfig+7)
+    ld hl, (DF_CC)
+    add hl, de    
+    
+    ld a, (RoomConfig+9)
+    ld b, a
+    ld a, (RoomConfig+6)     
+    ;ld b, 12
+drawPlatform    
+    ld (hl), a
+    inc hl
+    djnz drawPlatform
     ret
 
 ;;;; sprite code
@@ -601,6 +642,10 @@ blockFilled    ;8*10
     DEFB   8,  8,  8,  8,  8,  8,  8,  8    
 TopLineText
     DEFB _J,_U,_M,_P, 136, _R, _O, _0, _M, 0, 28, 28, 0,136,136, _G, _O, _L, _D, 28, 28, 0,136, 136, 136,_B,_Y,_T,_E,32,$ff
+compareValueGround
+    DEFB 0
+comparePlatformOrGround
+    DEFB 0
 spriteFrameCycle
     DEFB 0
 playerSpritePointer
@@ -649,8 +694,8 @@ RoomConfig
     DEFB 9    ; 9 blocks high
     DEFB 1    ; ID of next room from this one
     DEFB 8    ; character of platform
-    DEFW 579  ; start of platform
-    DEFB 8    ; length
+    DEFW 612  ; start of platform
+    DEFB 12    ; length
     DEFB 255  ; end 
 
     DEFB 1    ; room ID
