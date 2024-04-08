@@ -198,9 +198,10 @@ waitForTVSync
     xor a
     ld (roomJustEnteredFlag),a
     
-skipRoomDraw        
+skipRoomDraw     
+    call drawPlatforms   ; always do this as jump may corrupt them
     ld a, (playerXPos)   ; calculate effective ground Y position if platform
-    cp 15  ;;; for now check that it's greater than 15 - we need to setup proper platforms eventually
+    cp 12  ;;; for now check that it's greater than 15 - we need to setup proper platforms eventually
     jp c, checkGroundtestFailed    ; less than
     jp z, checkGroundtestFailed    ; equal to
 
@@ -259,7 +260,7 @@ skipBlankSpriteBigger
 moveLeft         
     ld a, (playerXPos)
     dec a
-    cp 1
+    cp 0
     jp z, updateRestOfScreen   
     ld (playerXPos), a
         
@@ -434,11 +435,11 @@ drawColZero
     inc hl    
     inc hl
     djnz drawColZero    
-    
+
+drawPlatforms    
     ld de, (RoomConfig+7)
     ld hl, (DF_CC)
-    add hl, de    
-    
+    add hl, de        
     ld a, (RoomConfig+9)
     ld b, a
     ld a, (RoomConfig+6)     
