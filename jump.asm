@@ -28,7 +28,7 @@
 #define         DEFW .word
 #define         EQU  .equ
 #define         ORG  .org
-
+CLS				EQU $0A2A
 ;;;;;#define DEBUG_NO_SCROLL
 
 ; keyboard port for shift key to v
@@ -39,8 +39,8 @@
 #define KEYBOARD_READ_PORT $FE 
 #define SCREEN_WIDTH 32
 #define SCREEN_HEIGHT 23   ; we can use the full screen becuase we're not using PRINT or PRINT AT ROM subroutines
+#define SHAPE_CHAR_WALL 189
 
-#define NO_JUMP 0
 
 
 VSYNCLOOP       EQU      3
@@ -162,9 +162,14 @@ initVariables
     ld a, 10
     ld (jumpDelayBackoff), a
     
+    xor a
+    ld (currentRoom), a
+    ld a, 1
+    ld (roomJustEnteredFlag), a
+    
     xor a  ; fastest way to zero register a
     ld (YSpeed), a
-    ld de, 500    
+    ld de, 467    
     ld hl, Display+1 
     add hl, de
     ld (currentPlayerLocation), hl
@@ -173,7 +178,7 @@ initVariables
     ld (playerSpritePointer), hl
     ld a, 5
     ld (playerXPos), a
-    ld a, 1
+    ld a, 2
     ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
 gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -183,13 +188,27 @@ waitForTVSync
 	call vsync
 	djnz waitForTVSync
     
+    ; if just entered room draw room
+    ld a, (roomJustEnteredFlag)
+    cp 1
+    jp nz, skipRoomDraw
+    call drawRoom
+    xor a
+    ld (roomJustEnteredFlag),a
+    
+skipRoomDraw        
     ld hl, (currentPlayerLocation)
     ld de, -33
     add hl, de
     ex de, hl
     ld hl, blankSprite
-    ld c, 8    
+    ld c, 7
+    ld b, 9
+    ld a, (playerYPos)
+    cp 2
+    jp z, skipBlankSpriteBigger
     ld b, 10
+skipBlankSpriteBigger    
     call drawSprite 
     
     ld hl, (playerSpritePointer)    
@@ -293,7 +312,7 @@ spriteNextRight
 doJump      ; triggered when jump key pressed just sets the YSpeed to 4    
     ld a, (playerYPos)  ; can only jump again if on ground = 1
     dec a
-    cp 0
+    cp 1
     jp nz, skipDoJump
     
     ld a, 6
@@ -329,7 +348,7 @@ skipDecrmentYSpeed
 checkYPosition  ; need to bring player back to ground   
     ld a, (playerYPos)
     dec a
-    cp 0
+    cp 1
     jp z, skipLandPlayer        
     ld hl, (currentPlayerLocation)
     ld (previousPlayerLocation), hl
@@ -342,31 +361,52 @@ checkYPosition  ; need to bring player back to ground
 skipLandPlayer
     
       
-skipMove       
-
-    ;ld de, 20
-    ;ld a, (YSpeed)
-    ;call print_number8bits  
-    ;ld de, 14
-    ;ld a, (playerYPos)
-    ;call print_number8bits 
-    
-    ; ld de, 8
-    ; ld bc, (previousPlayerLocation)    
-    ; call print_number16bits    
-    ; ld de, 14
-    ; ld bc, (currentPlayerLocation)    
-    ; call print_number16bits    
-        
-    
-         
+skipMove                
     jp gameLoop
 
 
- 
-playerWon    
-
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+drawRoom
+    call CLS
+    ld a, (currentRoom)
+    ld hl, RoomConfig
+    
+    ;; TODO
+    ; draw full boarder for every room
+    
+    ld de, TopLineText
+    ld bc, 2
+    call printstring
+    
+    
+    ld de, 33    
+    ld hl, Display+1    
+    add hl, de        
+    ld b, 32
+drawRoom_drawLineZero         ; draw the boarder at top and bottom
+    ld (hl), SHAPE_CHAR_WALL
+    inc hl
+    djnz drawRoom_drawLineZero
+    ld de, 726   ; this is 32+DF_CC to the left most char of bottom row
+    ld hl, Display+1    
+    add hl, de        
+    ld b, 32
+drawRoom_drawLineLast  
+    ld (hl), SHAPE_CHAR_WALL
+    inc hl
+    djnz drawRoom_drawLineLast        
+    
+    ld b, 22            ;; best way to just draw column down each side of screen
+    ld de, 31
+    ld hl, Display+1
+drawColZero      
+    ld (hl), SHAPE_CHAR_WALL          
+    add hl, de  
+    ld (hl), SHAPE_CHAR_WALL    
+    inc hl    
+    inc hl
+    djnz drawColZero    
+    ret
 
 ;;;; sprite code
 ;;;; our sprites are custom 8 by 8 charactor blocks - so will look fairly big (maybe too big)
@@ -464,31 +504,31 @@ Line2Text     	DEFB $F9,$D4                    ; RAND USR
 Line2End            
 endBasic
                                                                 
-Display        	DEFB $76                                                 
-				DEFB _J,_U,_M,_P, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,_B,_Y, 0,_A,_D,_R,_I,_A,_N, 0,_P,$76  ;Line0
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line1              
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line2
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line3
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line4
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line5
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line6
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line7
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line8
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line9
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line10
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line11
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line12
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line13
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line14
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line15
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line16
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line17
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line18
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line19
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line20
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line21
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76  ;Line22
-                DEFB  3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,$76  ;Line23
+Display        	DEFB $76                                                 				
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76                     
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
 
                                                                
 Variables:   
@@ -559,7 +599,8 @@ blockFilled    ;8*10
     DEFB   8,  8,  8,  8,  8,  8,  8,  8
     DEFB   8,  8,  8,  8,  8,  8,  8,  8     
     DEFB   8,  8,  8,  8,  8,  8,  8,  8    
-    
+TopLineText
+    DEFB _J,_U,_M,_P, 136, _R, _O, _0, _M, 0, 28, 28, 0,136,136, _G, _O, _L, _D, 28, 28, 0,136, 136, 136,_B,_Y,_T,_E,32,$ff
 spriteFrameCycle
     DEFB 0
 playerSpritePointer
@@ -570,6 +611,59 @@ playerYPos
     DEFB 0  
 jumpDelayBackoff    
     DEFB 0
+currentRoom
+    DEFB 0
+roomJustEnteredFlag
+    DEFB 0
+;================== Room config design - may only be partially implemented
+;; fixed length of 32 bytes per room
+
+; Room Config. Every room will have a predefined layout using simple constructs
+; They will follow this common layout:
+; 1) room id number - 8 bits 0 to 255 - room zero is start
+; 2) door list  - ways in and out
+;        a) orientation - east=1 west=2 up=3 down=4
+;        b) start position (relative to Display+1 (DF_CC))
+;        c) 8bit end position count from start
+;        d) "link" to the room to enter next 
+; 3) list of up to platforms three values
+;        a) character to drawSprite
+;        b) 16bit start position (relative to Display+1 (DF_CC))
+;        c) 8bit end position count from start
+;         terminated with 255 (chosen as that is never a valid character)
+;         so you can have as many as you like
+;        d) list of enemies 
+;           i) start position
+;           ii) end position 
+;           iii) speed
+;           iv) sprite memory location
+; 4) list of tokens to collect
+; ================
+;; Enemy config - list of enemy types - including memory location of the sprite
+
+;; early implementation will not have all the features
+RoomConfig
+    DEFB 0    ; room ID
+    DEFB 1    ; Door orientation east=1
+    DEFW 65   ; offset from DF_CC to top of door
+    DEFB 9    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 8    ; character of platform
+    DEFW 579  ; start of platform
+    DEFB 8    ; length
+    DEFB 255  ; end 
+
+    DEFB 1    ; room ID
+    DEFB 2    ; Door orientation east=1 west= 2
+    DEFW 65   ; offset from DF_CC to top of door
+    DEFB 9    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 8    ; character of platform
+    DEFW 298  ; start of platform
+    DEFB 20   ; length
+    DEFB 255  ; end 
+    
+    
 VariablesEnd:   DEFB $80
 BasicEnd: 
 #END
