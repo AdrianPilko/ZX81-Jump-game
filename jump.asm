@@ -447,31 +447,96 @@ drawColZero
 drawRoomDoors   ; basically overwrite the boarder with character 0
     
 
+    
 drawPlatforms
+    ;; this is long winded approach becasue on zx81 can't use the iy or ix registers todo offsets
     ld de, (RoomConfigAddress)
     ld hl, 17
     add hl, de
-    ld (platformAddressTemp), hl
-
-    ld hl, (platformAddressTemp)  ; load address of the pointer into hl
+    
     ld e, (hl)                   ; load the low byte of the address into register e
     inc hl                       ; increment hl to point to the high byte of the address
     ld d, (hl)                   ; load the high byte of the address into register d
     
     ld hl, (DF_CC)
     add hl, de 
-    ld a, (RoomConfig+19)
+    ld (platformStartAddress), hl
+
+    ld de, (RoomConfigAddress)
+    ld hl, 19
+    add hl, de
+    ld a, (hl)
     ld b, a
-    ld a, (RoomConfig+16)     
-    ;ld b, 12
-drawPlatform    
+    
+    ld de, (RoomConfigAddress)
+    ld hl, 16
+    add hl, de
+    ld a, (hl)     
+    ld hl, (platformStartAddress)
+drawPlatform1
     ld (hl), a
     inc hl
-    djnz drawPlatform
+    djnz drawPlatform1
+
+
+    ld de, (RoomConfigAddress)
+    ld hl, 21
+    add hl, de
     
-    ld de, 34
-    ld bc, (platformAddressTemp)
-    call print_number16bits
+    ld e, (hl)                   ; load the low byte of the address into register e
+    inc hl                       ; increment hl to point to the high byte of the address
+    ld d, (hl)                   ; load the high byte of the address into register d
+    
+    ld hl, (DF_CC)
+    add hl, de 
+    ld (platformStartAddress), hl
+
+    ld de, (RoomConfigAddress)
+    ld hl, 23
+    add hl, de
+    ld a, (hl)
+    ld b, a
+    
+    ld de, (RoomConfigAddress)
+    ld hl, 20
+    add hl, de
+    ld a, (hl)     
+    ld hl, (platformStartAddress)
+drawPlatform2
+    ld (hl), a
+    inc hl
+    djnz drawPlatform2
+
+
+    ld de, (RoomConfigAddress)
+    ld hl, 25
+    add hl, de
+    
+    ld e, (hl)                   ; load the low byte of the address into register e
+    inc hl                       ; increment hl to point to the high byte of the address
+    ld d, (hl)                   ; load the high byte of the address into register d
+    
+    ld hl, (DF_CC)
+    add hl, de 
+    ld (platformStartAddress), hl
+
+    ld de, (RoomConfigAddress)
+    ld hl, 27
+    add hl, de
+    ld a, (hl)
+    ld b, a
+    
+    ld de, (RoomConfigAddress)
+    ld hl, 24
+    add hl, de
+    ld a, (hl)     
+    ld hl, (platformStartAddress)
+drawPlatform3
+    ld (hl), a
+    inc hl
+    djnz drawPlatform3
+        
+    
     ret
 
 ;;;; sprite code
@@ -712,7 +777,7 @@ roomJustEnteredFlag
 ;; Enemy config - list of enemy types - including memory location of the sprite
 
 ;; early implementation will not have all the features
-platformAddressTemp
+platformStartAddress
     DEFW 0
 RoomConfigAddress
     DEFW 0
@@ -733,15 +798,18 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFB 0    ; 9 blocks high
     DEFB 0    ; ID of next room from this one  (byte 15)
     ;;; platforms max = 3 enabled            
+    
     DEFB 8    ; character of platform 0 = disabled  (byte16)
-    DEFW 607  ; start of platform
-    DEFB 15    ; length
-    DEFB 0    ; character of platform 0 = disabled
-    DEFW 607  ; start of platform
-    DEFB 15    ; length
-    DEFB 0    ; character of platform 0 = disabled
-    DEFW 607  ; start of platform
-    DEFB 15    ; length             (byte 27)
+    DEFW 610  ; start of platform   17,18
+    DEFB 15    ; length   19
+    
+    DEFB 137    ; character of platform 0 = disabled  20
+    DEFW 454  ; start of platform  21,22
+    DEFB 6    ; length  23
+    
+    DEFB 128    ; character of platform 0 = disabled  24
+    DEFW 331  ; start of platform  25,26
+    DEFB 8    ; length             (byte 27)
     ;;; tokens 2 bytes each
     DEFB 141  ; $ treasure token char  (zero = not valid) (byte 28)
     DEFW 211  ; offset from DF_CC
@@ -776,8 +844,8 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFW 607  ; start of platform
     DEFB 15    ; length
     DEFB 0    ; character of platform 0 = disabled
-    DEFW 607  ; start of platform
-    DEFB 15    ; length
+    DEFW 200  ; start of platform
+    DEFB 5    ; length
     DEFB 0    ; character of platform 0 = disabled
     DEFW 607  ; start of platform
     DEFB 15    ; length             (byte 27)
