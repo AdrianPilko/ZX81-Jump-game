@@ -201,7 +201,9 @@ waitForTVSync
 skipRoomDraw     
     call drawPlatforms   ; always do this as jump may corrupt them
     ld a, (playerXPos)   ; calculate effective ground Y position if platform
-    cp 12  ;;; for now check that it's greater than 15 - we need to setup proper platforms eventually
+    
+    cp 12  ;;; FIX HIEGHT FOR DEMO - we need to setup proper platforms eventually!!!
+    
     jp c, checkGroundtestFailed    ; less than
     jp z, checkGroundtestFailed    ; equal to
 
@@ -445,8 +447,32 @@ drawColZero
     djnz drawColZero    
     
 drawRoomDoors   ; basically overwrite the boarder with character 0
+    ;; this is long winded approach becasue on zx81 can't use the iy or ix registers todo offsets
+    ld de, (RoomConfigAddress)
+    ld hl, 2
+    add hl, de
     
+    ld e, (hl)                   ; load the low byte of the address into register e
+    inc hl                       ; increment hl to point to the high byte of the address
+    ld d, (hl)                   ; load the high byte of the address into register d
+    
+    ld hl, (DF_CC)
+    add hl, de 
+    ld (doorStartAddress), hl
+    ;; no loop for hieght of door 
+    ld de, (RoomConfigAddress)
+    ld hl, 4
+    add hl, de
+    ld a, (hl)
+    ld b, a
+    ld a, 41
+    ld hl, (doorStartAddress)
+doorDrawLoop
 
+    ld (hl), a
+    ld de,33
+    add hl, de
+    djnz doorDrawLoop
     
 drawPlatforms
     ;; this is long winded approach becasue on zx81 can't use the iy or ix registers todo offsets
@@ -781,13 +807,15 @@ platformStartAddress
     DEFW 0
 RoomConfigAddress
     DEFW 0
+doorStartAddress
+    DEFW 0
 RoomConfig          ; each room is fixed at 32 bytes long
 
     DEFB 0    ; room ID
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
-    DEFW 65   ; offset from DF_CC to top of door
-    DEFB 9    ; 9 blocks high
+    DEFW 97   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
     DEFB 1    ; ID of next room from this one
     DEFB 0    ; Door orientation east=1  0= door disabled
     DEFW 0   ; offset from DF_CC to top of door
