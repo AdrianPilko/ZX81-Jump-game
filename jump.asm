@@ -397,12 +397,20 @@ skipMove
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 drawRoom
     call CLS
-    ld a, (currentRoom)
+    ld a, (currentRoom)    
     ld hl, RoomConfig
+    ld de, 32
+    ld b,a    
+    cp 0
+    jp skipCalcualteRoomCOnfig
+drawRoomCalcOffsetToRoom    
+    ;;; ad 32 to offset to get next room
+    add hl, de 
+    djnz drawRoomCalcOffsetToRoom
+skipCalcualteRoomCOnfig
+    ld (RoomConfigAddress), hl
     
-    ;; TODO
-    ; draw full boarder for every room
-    
+    ; draw full boarder for every room   
     ld de, TopLineText
     ld bc, 2
     call printstring
@@ -435,19 +443,35 @@ drawColZero
     inc hl    
     inc hl
     djnz drawColZero    
+    
+drawRoomDoors   ; basically overwrite the boarder with character 0
+    
 
-drawPlatforms    
-    ld de, (RoomConfig+7)
+drawPlatforms
+    ld de, (RoomConfigAddress)
+    ld hl, 17
+    add hl, de
+    ld (platformAddressTemp), hl
+
+    ld hl, (platformAddressTemp)  ; load address of the pointer into hl
+    ld e, (hl)                   ; load the low byte of the address into register e
+    inc hl                       ; increment hl to point to the high byte of the address
+    ld d, (hl)                   ; load the high byte of the address into register d
+    
     ld hl, (DF_CC)
-    add hl, de        
-    ld a, (RoomConfig+9)
+    add hl, de 
+    ld a, (RoomConfig+19)
     ld b, a
-    ld a, (RoomConfig+6)     
+    ld a, (RoomConfig+16)     
     ;ld b, 12
 drawPlatform    
     ld (hl), a
     inc hl
     djnz drawPlatform
+    
+    ld de, 34
+    ld bc, (platformAddressTemp)
+    call print_number16bits
     ret
 
 ;;;; sprite code
@@ -667,13 +691,13 @@ roomJustEnteredFlag
 ; Room Config. Every room will have a predefined layout using simple constructs
 ; They will follow this common layout:
 ; 1) room id number - 8 bits 0 to 255 - room zero is start
-; 2) door list  - ways in and out
+; 2) doors  - 3 doors - can be enabled and disabled
 ;        a) orientation - east=1 west=2 up=3 down=4
 ;        b) start position (relative to Display+1 (DF_CC))
 ;        c) 8bit end position count from start
-;        d) "link" to the room to enter next 
-; 3) list of up to platforms three values
-;        a) character to drawSprite
+;        d) id of the room to enter next when pass through door
+; 3) 3 platforms per room can be set valid or not 
+;        a) character to draw
 ;        b) 16bit start position (relative to Display+1 (DF_CC))
 ;        c) 8bit end position count from start
 ;         terminated with 255 (chosen as that is never a valid character)
@@ -688,26 +712,88 @@ roomJustEnteredFlag
 ;; Enemy config - list of enemy types - including memory location of the sprite
 
 ;; early implementation will not have all the features
-RoomConfig
-    DEFB 0    ; room ID
-    DEFB 1    ; Door orientation east=1
-    DEFW 65   ; offset from DF_CC to top of door
-    DEFB 9    ; 9 blocks high
-    DEFB 1    ; ID of next room from this one
-    DEFB 8    ; character of platform
-    DEFW 612  ; start of platform
-    DEFB 12    ; length
-    DEFB 255  ; end 
+platformAddressTemp
+    DEFW 0
+RoomConfigAddress
+    DEFW 0
+RoomConfig          ; each room is fixed at 32 bytes long
 
-    DEFB 1    ; room ID
-    DEFB 2    ; Door orientation east=1 west= 2
+    DEFB 0    ; room ID
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
     DEFW 65   ; offset from DF_CC to top of door
     DEFB 9    ; 9 blocks high
     DEFB 1    ; ID of next room from this one
-    DEFB 8    ; character of platform
-    DEFW 298  ; start of platform
-    DEFB 20   ; length
-    DEFB 255  ; end 
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    DEFB 8    ; character of platform 0 = disabled  (byte16)
+    DEFW 607  ; start of platform
+    DEFB 15    ; length
+    DEFB 0    ; character of platform 0 = disabled
+    DEFW 607  ; start of platform
+    DEFB 15    ; length
+    DEFB 0    ; character of platform 0 = disabled
+    DEFW 607  ; start of platform
+    DEFB 15    ; length             (byte 27)
+    ;;; tokens 2 bytes each
+    DEFB 141  ; $ treasure token char  (zero = not valid) (byte 28)
+    DEFW 211  ; offset from DF_CC
+    DEFB 141  ; $
+    DEFW 483  ; offset from DF_CC
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;  
+
+
+    DEFB 1    ; room ID  (FOR NOW EVERYTHING ELSE IS A COPY)
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 65   ; offset from DF_CC to top of door
+    DEFB 9    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    DEFB 8    ; character of platform 0 = disabled  (byte16)
+    DEFW 607  ; start of platform
+    DEFB 15    ; length
+    DEFB 0    ; character of platform 0 = disabled
+    DEFW 607  ; start of platform
+    DEFB 15    ; length
+    DEFB 0    ; character of platform 0 = disabled
+    DEFW 607  ; start of platform
+    DEFB 15    ; length             (byte 27)
+    ;;; tokens 2 bytes each
+    DEFB 141  ; $ treasure token char  (zero = not valid) (byte 28)
+    DEFW 211  ; offset from DF_CC
+    DEFB 141  ; $
+    DEFW 483  ; offset from DF_CC
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;  
     
     
 VariablesEnd:   DEFB $80
