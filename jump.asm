@@ -199,22 +199,13 @@ waitForTVSync
     ld (roomJustEnteredFlag),a
     
 skipRoomDraw     
-    call drawPlatforms   ; always do this as jump may corrupt them
-    ld a, (playerXPos)   ; calculate effective ground Y position if platform
+    call drawPlatforms   ; always do this as jump may corrupt them  
     
-    cp 12  ;;; FIX HIEGHT FOR DEMO - we need to setup proper platforms eventually!!!
-    
-    jp c, checkGroundtestFailed    ; less than
-    jp z, checkGroundtestFailed    ; equal to
+    ;;; this handles all the logic and calculation of what ground position is 
+    ;;; immediately benieth the players X position 
+    ;;this will set a register with the height
+    call set_a_WithGroundCompare
 
-checkGroundtestSucceeded
-    ld a, 6   ; this will have to be set to the actual platform height  - eventually
-    ld (comparePlatformOrGround), a
-    jp continueGroundProc
-checkGroundtestFailed
-    ld a, (compareValueGround)
-    ld (comparePlatformOrGround), a
-    
 continueGroundProc
     ld c, 7     ; width
     ld b, 9     ; rows 
@@ -394,6 +385,25 @@ skipLandPlayer
       
 skipMove                
     jp gameLoop
+    
+    
+set_a_WithGroundCompare
+    ld a, (playerXPos)   ; calculate effective ground Y position if platform
+       
+    cp 12  ;;; FIX X position of platform FOR DEMO - we need to setup proper platforms eventually!!!
+    
+    jp c, checkGroundtestFailed    ; less than
+    jp z, checkGroundtestFailed    ; equal to
+
+checkGroundtestSucceeded
+    ld a, 6   ; this will have to be set to the actual platform height  - eventually
+    ld (comparePlatformOrGround), a
+    jp set_a_WithGroundCompareEND
+checkGroundtestFailed
+    ld a, (compareValueGround)
+    ld (comparePlatformOrGround), a
+set_a_WithGroundCompareEND    
+    ret
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -776,6 +786,8 @@ currentRoom
     DEFB 0
 roomJustEnteredFlag
     DEFB 0
+    
+       
 ;================== Room config design - may only be partially implemented
 ;; fixed length of 32 bytes per room
 
