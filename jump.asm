@@ -387,22 +387,58 @@ skipMove
     jp gameLoop
     
     
-set_a_WithGroundCompare
-    ld a, (playerXPos)   ; calculate effective ground Y position if platform
-       
-    cp 12  ;;; FIX X position of platform FOR DEMO - we need to setup proper platforms eventually!!!
+set_a_WithGroundCompare   
+    ld de, (RoomConfigAddress)
+    ld hl, 17
+    add hl, de
     
-    jp c, checkGroundtestFailed    ; less than
-    jp z, checkGroundtestFailed    ; equal to
+    ld e, (hl)                   ; load the low byte of the address into register e
+    inc hl                       ; increment hl to point to the high byte of the address
+    ld d, (hl)                   ; load the high byte of the address into register d
+    
+    ld hl, (DF_CC)
+    add hl, de 
+    ld (platformStartAddress), hl
+    ex de, hl
+    ld hl, (currentPlayerLocation)
+    
+    ;de contains location of first platform start address
+    ;hl container player start address
+    ; we repeatedly add 33 to hl (player position) and check if it matches platform position in de
+    ;; if we loop until we reach start of penultimate to bottom 727 then we will have tested (most of)  screen
+    
+    
+    ;; this is very ineffcient but starting attempt, 32 * 22 locations (skip bottom trwo rows)
 
-checkGroundtestSucceeded
-    ld a, 6   ; this will have to be set to the actual platform height  - eventually
-    ld (comparePlatformOrGround), a
-    jp set_a_WithGroundCompareEND
-checkGroundtestFailed
+    ld bc, (currentPlayerLocation)
+GroundCompareLoopRow
+    push bc
+    ld b, c
+GroundCompareLoopCol
+    ld a, h
+    cp d
+    jp z, CheckGndFirstEqual
+    jp CheckGndContinueLoop
+CheckGndFirstEqual
+    ld a, l
+    cp e
+    jp z, CheckGndBothEqual
+    
+CheckGndContinueLoop
+    djnz GroundCompareLoopCol
+    
+    pop bc  
+    djnz GroundCompareLoopRow
+    
     ld a, (compareValueGround)
-    ld (comparePlatformOrGround), a
+    
+    jp set_a_WithGroundCompareEND
+CheckGndBothEqual
+    ld a, 6   ; this will have to be set to the actual platform height  - eventually    
+    jp set_a_WithGroundCompareEND
+    
 set_a_WithGroundCompareEND    
+    ld (comparePlatformOrGround), a
     ret
 
 
