@@ -166,10 +166,11 @@ initVariables
     ld (currentRoom), a
     ld a, 1
     ld (roomJustEnteredFlag), a
+    ld (groundPlatFlag), a
     
     xor a  ; fastest way to zero register a
     ld (YSpeed), a
-    ld de, 467    
+    ld de, 269    
     ld hl, Display+1 
     add hl, de
     ld (currentPlayerLocation), hl
@@ -182,6 +183,7 @@ initVariables
     ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most
     ld a, 2
     ld (compareValueGround), a
+    
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
 gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -190,6 +192,7 @@ waitForTVSync
 	call vsync
 	djnz waitForTVSync
     
+       
     ; if just entered room draw room
     ld a, (roomJustEnteredFlag)
     cp 1
@@ -200,29 +203,26 @@ waitForTVSync
     
 skipRoomDraw     
     call drawPlatforms   ; always do this as jump may corrupt them  
-    
+
     ;;; this handles all the logic and calculation of what ground position is 
     ;;; immediately benieth the players X position 
     ;;this will set a register with the height
-    call set_a_WithGroundCompare
-
-continueGroundProc
-    ld c, 7     ; width
-    ld b, 9     ; rows 
-    ld de, (comparePlatformOrGround)
-    ld a, (playerYPos)
-    cp e            
-    jp c, playerLowerThanPlatorm
-    jp z, playerLowerThanPlatorm
-    ld b, 10    ; set rows to 10 if not on platform or ground
-playerLowerThanPlatorm
-skipBlankSpriteBigger    
+    call checkIfPlatformOrGround   ; sets groundPlatFlag
+        
+    ld a, (groundPlatFlag)
+    cp 1
+    jp z, setSmallerSprite 
+    ld b, 10   ; pre set the normal blank sprite rows to 9
+    jp skipsetBlankSprite        
+setSmallerSprite    
+    ld b, 9
+skipsetBlankSprite    
     ld hl, (currentPlayerLocation)
     ld de, -33
     add hl, de
     ex de, hl
     ld hl, blankSprite
-
+    ld c, 8
     call drawSprite 
     
     ld hl, (playerSpritePointer)    
@@ -323,24 +323,27 @@ spriteNextRight
     ld (spriteFrameCycle), a
     jp updateRestOfScreen 
     
-doJump      ; triggered when jump key pressed just sets the YSpeed to 4      
-    ld a, (playerYPos)
-    ld de, (comparePlatformOrGround)
-    cp e         
-    jp c, doJumptestSucceeded    ; less than
-    jp z, doJumptestSucceeded    ; equal to
-skipDoJump        
+doJump      ; triggered when jump key pressed just sets the YSpeed      
+    ld a, (groundPlatFlag)
+    cp 1
+    jp nz, updateRestOfScreen    
+    
+    ld a, (YSpeed)
+    cp 0    ;;  only set y speed when it's zero
+    jp z, setYSpeed
     jp updateRestOfScreen
-doJumptestSucceeded    
-    ld a, 6
+setYSpeed    
+    ld a, 2
     ld (YSpeed), a         
-    jp updateRestOfScreen
+ 
 
 updateRestOfScreen    
     ld a, (YSpeed)
     cp 0
-    jp z, skipDecrmentYSpeed        
-    ld b, 2 
+    jp nz, jumpUpLoopExe
+    jp skipDecrmentYSpeed           
+jumpUpLoopExe
+    ld b, 1     
 jumpUpLoop    
     ld hl, (currentPlayerLocation)
     ld (previousPlayerLocation), hl      
@@ -360,11 +363,12 @@ jumpUpLoop
 skipDecrmentYSpeed
    
 checkYPosition  ; need to bring player back to ground   
+    ;;; this handles all the logic and calculation of what ground position is 
+    ;;; immediately benieth the players X position 
+    ;;this will set a register with the height
 
-    ld a, (playerYPos)
-    ld de, (comparePlatformOrGround)
-    cp e         
-    jp c, skipLandPlayer    ; less than
+    ld a, (groundPlatFlag)
+    cp 1
     jp z, skipLandPlayer    ; equal to
 
 checkYPositiontestSucceeded
@@ -378,67 +382,64 @@ checkYPositiontestSucceeded
     ld (playerYPos), a
     
 skipLandPlayer        
-    
-    
- 
-    
       
 skipMove                
+
+    ld a, (YSpeed)
+    ld de, 38
+    call print_number8bits
+    ld de, 34
+    ld a, (groundPlatFlag)
+    call print_number8bits    
+   
     jp gameLoop
     
-    
-set_a_WithGroundCompare   
-    ld de, (RoomConfigAddress)
-    ld hl, 17
+
+;set a flag if the next row is platform or ground    
+checkIfPlatformOrGround
+;;;;;;;; start of debug
+    ld bc, (currentPlayerLocation)     ;; currentPlayerLocation is already offset to
+    ld de, 42
+    call print_number16bits
+
+    ld hl, (currentPlayerLocation)     ;; currentPlayerLocation is already offset to Display+1    
+    ld de, 264    ; offset hl to +1 row from bottom of sprite
     add hl, de
     
-    ld e, (hl)                   ; load the low byte of the address into register e
-    inc hl                       ; increment hl to point to the high byte of the address
-    ld d, (hl)                   ; load the high byte of the address into register d
+    push hl
+    pop bc
+    ld de, 47
+    call print_number16bits
     
-    ld hl, (DF_CC)
-    add hl, de 
-    ld (platformStartAddress), hl
-    ex de, hl
-    ld hl, (currentPlayerLocation)
-    
-    ;de contains location of first platform start address
-    ;hl container player start address
-    ; we repeatedly add 33 to hl (player position) and check if it matches platform position in de
-    ;; if we loop until we reach start of penultimate to bottom 727 then we will have tested (most of)  screen
-    
-    
-    ;; this is very ineffcient but starting attempt, 32 * 22 locations (skip bottom trwo rows)
+    ld hl, (DF_CC)     ;; currentPlayerLocation is already offset to Display+1    
+    push hl
+    pop bc
+    ld de, 52
+    call print_number16bits    
+;;;;;;;;;; END OF DEBUG
 
-    ld bc, (currentPlayerLocation)
-GroundCompareLoopRow
-    push bc
-    ld b, c
-GroundCompareLoopCol
-    ld a, h
-    cp d
-    jp z, CheckGndFirstEqual
-    jp CheckGndContinueLoop
-CheckGndFirstEqual
-    ld a, l
-    cp e
-    jp z, CheckGndBothEqual
+    ld hl, (currentPlayerLocation)     ;; currentPlayerLocation is already offset to Display+1    
+    ld de, 266    ; offset hl to +1 row from bottom of sprite
+    add hl, de
     
-CheckGndContinueLoop
-    djnz GroundCompareLoopCol
+   
+    ld b, 4   ; loop counter to check blocks just under sprite
+compareGNDLoop    
+    ld a, (hl)
+    inc hl
+    cp 0  ; compare a with zero (blank character)
+    jp nz, setFlagGroundPlatform
+    djnz compareGNDLoop
     
-    pop bc  
-    djnz GroundCompareLoopRow
     
-    ld a, (compareValueGround)
-    
-    jp set_a_WithGroundCompareEND
-CheckGndBothEqual
-    ld a, 6   ; this will have to be set to the actual platform height  - eventually    
-    jp set_a_WithGroundCompareEND
-    
-set_a_WithGroundCompareEND    
-    ld (comparePlatformOrGround), a
+    xor a
+    ld (groundPlatFlag), a
+    jp checkIfPlatformOrGroundEND; no ground or platform found
+setFlagGroundPlatform
+    ld a, 1
+    ld (groundPlatFlag), a    
+    ;ld (comparePlatformOrGround), a
+checkIfPlatformOrGroundEND    
     ret
 
 
@@ -472,7 +473,7 @@ drawRoom_drawLineZero         ; draw the boarder at top and bottom
     ld (hl), SHAPE_CHAR_WALL
     inc hl
     djnz drawRoom_drawLineZero
-    ld de, 726   ; this is 32+DF_CC to the left most char of bottom row
+    ld de, 759   ; this is 32+DF_CC to the left most char of bottom row
     ld hl, Display+1    
     add hl, de        
     ld b, 32
@@ -481,7 +482,7 @@ drawRoom_drawLineLast
     inc hl
     djnz drawRoom_drawLineLast        
     
-    ld b, 22            ;; best way to just draw column down each side of screen
+    ld b, 23            ;; best way to just draw column down each side of screen
     ld de, 31
     ld hl, Display+1
 drawColZero      
@@ -733,8 +734,11 @@ Display        	DEFB $76
                 DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
                 DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
 
+Variables: 
+LineOfBlank
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                                                
-Variables:   
+  
 YSpeed   
     DEFB 0
 currentPlayerLocation 
@@ -822,7 +826,8 @@ currentRoom
     DEFB 0
 roomJustEnteredFlag
     DEFB 0
-    
+groundPlatFlag
+    DEFB 0
        
 ;================== Room config design - may only be partially implemented
 ;; fixed length of 32 bytes per room
