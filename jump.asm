@@ -328,7 +328,7 @@ doJump      ; triggered when jump key pressed just sets the YSpeed
     jp z, setYSpeed
     jp updateRestOfScreen
 setYSpeed    ;;; we've allowed the jusp to happen - can't keep jumping in mid air!
-    ld a, 6
+    ld a, 4
     ld (YSpeed), a   
     ld a, 1
     ld (justJumpFlag),a
