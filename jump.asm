@@ -164,10 +164,10 @@ initVariables
     
     xor a
     ld (currentRoom), a
+    ld (groundPlatFlag), a  ; set to zero as we start player above
+    ld (justJumpFlag),a
     ld a, 1
     ld (roomJustEnteredFlag), a
-    ld (groundPlatFlag), a
-    
     xor a  ; fastest way to zero register a
     ld (YSpeed), a
     ld de, 269    
@@ -204,19 +204,18 @@ waitForTVSync
 skipRoomDraw     
     call drawPlatforms   ; always do this as jump may corrupt them  
 
-    ;;; this handles all the logic and calculation of what ground position is 
-    ;;; immediately benieth the players X position 
-    ;;this will set a register with the height
     call checkIfPlatformOrGround   ; sets groundPlatFlag
-        
+       
     ld a, (groundPlatFlag)
     cp 1
-    jp z, setSmallerSprite 
-    ld b, 10   ; pre set the normal blank sprite rows to 9
-    jp skipsetBlankSprite        
-setSmallerSprite    
+    jp z, setSmallerBlankSprite      ;if platform  set smaller 
+    jp setBiggerBlankSprite          ; else
+setSmallerBlankSprite    
     ld b, 9
-skipsetBlankSprite    
+    jp skipsetBlankSprite       
+setBiggerBlankSprite        
+    ld b, 10   ; pre set the normal blank sprite rows to 9
+skipsetBlankSprite       
     ld hl, (currentPlayerLocation)
     ld de, -33
     add hl, de
@@ -224,7 +223,7 @@ skipsetBlankSprite
     ld hl, blankSprite
     ld c, 8
     call drawSprite 
-    
+        
     ld hl, (playerSpritePointer)    
     ld de, (currentPlayerLocation)
     ld c, 8
@@ -326,15 +325,13 @@ spriteNextRight
 doJump      ; triggered when jump key pressed just sets the YSpeed      
     ld a, (groundPlatFlag)
     cp 1
-    jp nz, updateRestOfScreen    
-    
-    ld a, (YSpeed)
-    cp 0    ;;  only set y speed when it's zero
     jp z, setYSpeed
     jp updateRestOfScreen
-setYSpeed    
-    ld a, 2
-    ld (YSpeed), a         
+setYSpeed    ;;; we've allowed the jusp to happen - can't keep jumping in mid air!
+    ld a, 6
+    ld (YSpeed), a   
+    ld a, 1
+    ld (justJumpFlag),a
  
 
 updateRestOfScreen    
@@ -343,14 +340,14 @@ updateRestOfScreen
     jp nz, jumpUpLoopExe
     jp skipDecrmentYSpeed           
 jumpUpLoopExe
-    ld b, 1     
+    ld b, 2    
 jumpUpLoop    
     ld hl, (currentPlayerLocation)
     ld (previousPlayerLocation), hl      
     ld de, -33 
     add hl, de
     ld (currentPlayerLocation), hl  
-    
+       
     ld a, (playerYPos)
     inc a
     ld (playerYPos), a    
@@ -360,18 +357,17 @@ jumpUpLoop
     dec a
     ld (YSpeed),a
 
+
 skipDecrmentYSpeed
    
 checkYPosition  ; need to bring player back to ground   
-    ;;; this handles all the logic and calculation of what ground position is 
-    ;;; immediately benieth the players X position 
-    ;;this will set a register with the height
-
     ld a, (groundPlatFlag)
-    cp 1
-    jp z, skipLandPlayer    ; equal to
-
-checkYPositiontestSucceeded
+    cp 0
+    jp z, landPlayer
+    jp skipLandPlayer
+    
+;checkYPositiontestSucceeded
+landPlayer
     ld hl, (currentPlayerLocation)
     ld (previousPlayerLocation), hl
     ld de, 33 
@@ -379,7 +375,7 @@ checkYPositiontestSucceeded
     ld (currentPlayerLocation), hl
     ld a, (playerYPos)    
     dec a
-    ld (playerYPos), a
+    ld (playerYPos), a    
     
 skipLandPlayer        
       
@@ -403,7 +399,7 @@ checkIfPlatformOrGround
     call print_number16bits
 
     ld hl, (currentPlayerLocation)     ;; currentPlayerLocation is already offset to Display+1    
-    ld de, 264    ; offset hl to +1 row from bottom of sprite
+    ld de, 266    ; offset hl to +1 row from bottom of sprite
     add hl, de
     
     push hl
@@ -427,8 +423,8 @@ checkIfPlatformOrGround
 compareGNDLoop    
     ld a, (hl)
     inc hl
-    cp 0  ; compare a with zero (blank character)
-    jp nz, setFlagGroundPlatform
+    cp SHAPE_CHAR_WALL  
+    jp z, setFlagGroundPlatform
     djnz compareGNDLoop
     
     
@@ -541,10 +537,11 @@ drawPlatforms
     ld a, (hl)
     ld b, a
     
-    ld de, (RoomConfigAddress)
-    ld hl, 16
-    add hl, de
-    ld a, (hl)     
+    ;ld de, (RoomConfigAddress)
+    ;ld hl, 16
+    ;;add hl, de
+    ;ld a, (hl)     
+    ld a, SHAPE_CHAR_WALL ; force all platforms to be same to help ease checking landed
     ld hl, (platformStartAddress)
 drawPlatform1
     ld (hl), a
@@ -570,10 +567,11 @@ drawPlatform1
     ld a, (hl)
     ld b, a
     
-    ld de, (RoomConfigAddress)
-    ld hl, 20
-    add hl, de
-    ld a, (hl)     
+    ; ld de, (RoomConfigAddress)
+    ; ld hl, 20
+    ; add hl, de
+    ; ld a, (hl)     
+    ld a, SHAPE_CHAR_WALL 
     ld hl, (platformStartAddress)
 drawPlatform2
     ld (hl), a
@@ -599,10 +597,11 @@ drawPlatform2
     ld a, (hl)
     ld b, a
     
-    ld de, (RoomConfigAddress)
-    ld hl, 24
-    add hl, de
-    ld a, (hl)     
+    ; ld de, (RoomConfigAddress)
+    ; ld hl, 24
+    ; add hl, de
+    ; ld a, (hl)  
+    ld a, SHAPE_CHAR_WALL     
     ld hl, (platformStartAddress)
 drawPlatform3
     ld (hl), a
@@ -795,6 +794,7 @@ blankSprite
     DEFB   0,  0,  0,  0,  0,  0,  0,  0    
     DEFB   0,  0,  0,  0,  0,  0,  0,  0
     DEFB   0,  0,  0,  0,  0,  0,  0,  0      
+    DEFB   8,  8,  0,  0,  0,  0,  0,  0      
 blockFilled    ;8*10
     DEFB   8,  8,  8,  8,  8,  8,  8,  8
     DEFB   8,  8,  8,  8,  8,  8,  8,  8
@@ -828,7 +828,8 @@ roomJustEnteredFlag
     DEFB 0
 groundPlatFlag
     DEFB 0
-       
+justJumpFlag
+    DEFB 0
 ;================== Room config design - may only be partially implemented
 ;; fixed length of 32 bytes per room
 
