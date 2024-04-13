@@ -205,7 +205,10 @@ skipRoomDraw
     call drawPlatforms   ; always do this as jump may corrupt them  
 
     call checkIfPlatformOrGround   ; sets groundPlatFlag
-       
+    
+    ;ld a, (justJumpFlag)
+    ;cp 1
+    jp nz, setBiggerBlankSprite
     ld a, (groundPlatFlag)
     cp 1
     jp z, setSmallerBlankSprite      ;if platform  set smaller 
@@ -216,6 +219,9 @@ setSmallerBlankSprite
 setBiggerBlankSprite        
     ld b, 10   ; pre set the normal blank sprite rows to 9
 skipsetBlankSprite       
+    xor a
+    ld (justJumpFlag), a
+    
     ld hl, (currentPlayerLocation)
     ld de, -33
     add hl, de
