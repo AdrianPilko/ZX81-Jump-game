@@ -186,7 +186,7 @@ initVariables
     ld (playerSpritePointer), hl
     ld a, 5
     ld (playerXPos), a
-    ld a, 2
+    ld a, 9
     ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most
     ld a, 2
     ld (compareValueGround), a
@@ -359,7 +359,7 @@ doJump      ; triggered when jump key pressed just sets the YSpeed
     jp z, setYSpeed
     jp updateRestOfScreen
 setYSpeed    ;;; we've allowed the jusp to happen - can't keep jumping in mid air!
-    ld a, 4
+    ld a, 6
     ld (YSpeed), a   
     ld a, 1
     ld (justJumpFlag),a
@@ -371,6 +371,12 @@ updateRestOfScreen
     jp nz, jumpUpLoopExe
     jp skipDecrmentYSpeed           
 jumpUpLoopExe
+
+    ld a, (playerYPos)   ; check player not at top (ie his head his top of room!)
+    cp 14
+    jp z, zeroYSpeedBangedHead
+    ;cp 14
+    ;jp z, checkYPosition    
     ld b, 2    
 jumpUpLoop    
     ld hl, (currentPlayerLocation)
@@ -387,8 +393,11 @@ jumpUpLoop
     ld a, (YSpeed)
     dec a
     ld (YSpeed),a
+    jp checkYPosition
 
-
+zeroYSpeedBangedHead
+    xor a
+    ld (YSpeed), a
 skipDecrmentYSpeed
    
 checkYPosition  ; need to bring player back to ground   
@@ -416,7 +425,7 @@ skipMove
     ld de, 38
     call print_number8bits
     ld de, 34
-    ld a, (groundPlatFlag)
+    ld a, (playerYPos)
     call print_number8bits    
    
     jp gameLoop
@@ -963,14 +972,14 @@ RoomConfig          ; each room is fixed at 32 bytes long
     
     DEFB 8    ; character of platform 0 = disabled  (byte16)
     DEFW 610  ; start of platform   17,18
-    DEFB 15    ; length   19
+    DEFB 6    ; length   19
     
     DEFB 137    ; character of platform 0 = disabled  20
     DEFW 454  ; start of platform  21,22
     DEFB 6    ; length  23
     
     DEFB 128    ; character of platform 0 = disabled  24
-    DEFW 331  ; start of platform  25,26
+    DEFW 364  ; start of platform  25,26
     DEFB 17    ; length             (byte 27)
     ;;; tokens 2 bytes each
     DEFW 211  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
