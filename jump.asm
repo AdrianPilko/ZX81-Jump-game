@@ -47,7 +47,7 @@ CLS				EQU $0A2A
 #define SCREEN_WIDTH 32
 #define SCREEN_HEIGHT 23   ; we can use the full screen becuase we're not using PRINT or PRINT AT ROM subroutines
 #define SHAPE_CHAR_WALL 189
-
+#define TREASURE_CHARACTER 141  ; $$$$
 
 
 VSYNCLOOP       EQU      3
@@ -170,6 +170,8 @@ initVariables
     ld (jumpDelayBackoff), a
     
     xor a
+    ld (score_mem_tens),a
+	ld (score_mem_hund),a    
     ld (currentRoom), a
     ld (groundPlatFlag), a  ; set to zero as we start player above
     ld (justJumpFlag),a
@@ -190,7 +192,7 @@ initVariables
     ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most
     ld a, 2
     ld (compareValueGround), a
-    
+       
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
 gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -199,22 +201,26 @@ waitForTVSync
 	call vsync
 	djnz waitForTVSync
     
-       
+    ld hl, (currentPlayerLocation) ;; hl is the location to start checking
+    ld de, -33
+    add hl, de
+    ld b, 9 ;; b is the rows to check 
+    ld c, 8 ;; c is the columns to check    
+    call checkAndGoldCollect  ; we check this before the blank sprite is drawn     
+    
     ; if just entered room draw room
     ld a, (roomJustEnteredFlag)
     cp 1
     jp nz, skipRoomDraw
     call drawRoom
+    
     xor a
+    ld (goldFoundInRoom), a
     ld (roomJustEnteredFlag),a
     
 skipRoomDraw     
-;    call drawPlatforms   ; always do this as jump may corrupt them  
-
     call checkIfPlatformOrGround   ; sets groundPlatFlag
     
-    ;ld a, (justJumpFlag)
-    ;cp 1
     jp nz, setBiggerBlankSprite
     ld a, (groundPlatFlag)
     cp 1
@@ -228,14 +234,14 @@ setBiggerBlankSprite
 skipsetBlankSprite       
     xor a
     ld (justJumpFlag), a
-    
+       
     ld hl, (currentPlayerLocation)
     ld de, -33
     add hl, de
     ex de, hl
     ld hl, blankSprite
     ld c, 8
-    call drawSprite 
+    call drawSprite    
         
     ld hl, (playerSpritePointer)    
     ld de, (currentPlayerLocation)
@@ -422,12 +428,12 @@ skipLandPlayer
       
 skipMove                
 
-    ld a, (YSpeed)
+    ld a, (goldFoundInRoom)
     ld de, 38
     call print_number8bits
-    ld de, 34
-    ld a, (playerYPos)
-    call print_number8bits    
+    ;ld de, 34
+    ;ld a, (playerYPos)
+    ;call print_number8bits    
    
     jp gameLoop
     
@@ -481,6 +487,45 @@ setFlagGroundPlatform
 checkIfPlatformOrGroundEND    
     ret
 
+
+checkAndClearDoor
+;; works on the premise that there's always 4 gold per room
+    ld a, (goldFoundInRoom)
+    cp 4
+    jr z, doorClear
+    jr noDoorClear    
+doorClear    
+    ;; this is long winded approach becasue on zx81 can't use the iy or ix registers todo offsets
+    ld de, (RoomConfigAddress)
+    ld hl, 2
+    add hl, de
+    
+    ld e, (hl)                   ; load the low byte of the address into register e
+    inc hl                       ; increment hl to point to the high byte of the address
+    ld d, (hl)                   ; load the high byte of the address into register d
+    
+    ld hl, (DF_CC)
+    add hl, de 
+    ld (doorStartAddress), hl
+    ;; no loop for hieght of door 
+    ld de, (RoomConfigAddress)
+    ld hl, 4
+    add hl, de
+    ld a, (hl)
+    ld b, a
+    xor a   ; clear a to blank character now door open 
+    ld hl, (doorStartAddress)
+doorClearLoop
+
+    ld (hl), a
+    ld de,33
+    add hl, de
+    djnz doorClearLoop
+    
+    ;; we'll also need to clear all other doors 
+    ;; we'll also need to set a flag to allow move to next room
+noDoorClear
+    ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 drawRoom
@@ -576,7 +621,7 @@ drawTreasure
     push hl       
         ld hl, (DF_CC)
         add hl, de 
-        ld a, 141    ; inverse $ for treasure
+        ld a, TREASURE_CHARACTER    ; inverse $ for treasure
         ld (hl), a
     pop hl
     djnz drawTreasure    
@@ -739,7 +784,77 @@ drawSprite_OR_ColLoop
     ex de, hl
     pop bc
     djnz drawSprite_OR_BACKGROUND    
-    ret     
+    ret  
+
+
+
+
+;; hl is the location to start checking
+;; b is the rows to check
+;; c is the columns to check
+checkAndGoldCollect 
+    xor a
+    ld (goldFoundCount), a
+checkAndGoldCollectRowLoop
+    push bc          
+    ld b, c    ; get column loop counter in b 
+         push hl
+GoldCollectColLoop       
+            ld a, (hl)
+            inc hl            
+            cp TREASURE_CHARACTER
+            jr z, foundGold_YES           
+            djnz GoldCollectColLoop
+        pop hl
+        ld de, 33             ;; move next write position to next row
+        add hl, de
+    pop bc
+    djnz checkAndGoldCollectRowLoop    
+    jp justPrintScore
+    
+foundGold_YES
+    pop hl  ;; as we jumped out of the loop need to pop these
+    pop bc  ;; as we jumped out of the loop need to pop these
+    
+    ld a, 1
+    ld (goldFoundCount),a    ;set this for just below where score gets inc'd
+    ld c, 1    
+    ld a, (goldFoundInRoom)
+    add a, c
+    ld (goldFoundInRoom), a
+    
+    call checkAndClearDoor        
+    
+    ld a, (goldFoundCount)
+    cp 0
+    jp z, justPrintScore
+    ld b, a
+
+    ld a,(score_mem_tens)				; add one to score, scoring is binary coded decimal (BCD)
+	add a,1	
+	daa									; z80 daa instruction realigns for BCD after add or subtract
+	ld (score_mem_tens),a	
+	cp 153
+	jr z, addOneToHund
+	jr skipAddHund
+addOneToHund
+	ld a, 0
+	ld (score_mem_tens), a
+    ld a, (score_mem_hund)
+	add a, 1
+	daa                                   ; z80 daa instruction realigns for BCD after add or subtract
+	ld (score_mem_hund), a
+skipAddHund	
+    
+justPrintScore
+    ld bc, 23
+    ld de, score_mem_tens
+    call printNumber
+    ld bc, 21
+    ld de, score_mem_hund
+    call printNumber    
+    
+    ret
         
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
 printstring
@@ -786,6 +901,27 @@ print_number8bits
     ld (hl), a  
     
     ret
+
+printNumber
+    ld hl,Display
+    add hl,bc	
+printNumber_loop
+    ld a,(de)
+    push af ;store the original value of a for later
+    and $f0 ; isolate the first digit
+    rra
+    rra
+    rra
+    rra
+    add a,$1c ; add 28 to the character code
+    ld (hl), a
+    inc hl
+    pop af ; retrieve original value of a
+    and $0f ; isolate the second digit
+    add a,$1c ; add 28 to the character code
+    ld (hl), a      
+    ret  
+    
 
 ;check if TV synchro (FRAMES) happend
 vsync	
@@ -923,6 +1059,10 @@ playerXPos
     DEFB 0   
 playerYPos    
     DEFB 0  
+score_mem_tens
+    DEFB 0
+score_mem_hund
+    DEFB 0
 jumpDelayBackoff    
     DEFB 0
 currentRoom
@@ -932,6 +1072,10 @@ roomJustEnteredFlag
 groundPlatFlag
     DEFB 0
 justJumpFlag
+    DEFB 0
+goldFoundCount
+    DEFB 0
+goldFoundInRoom
     DEFB 0
 ;================== Room config design - may only be partially implemented
 ;; fixed length of 32 bytes per room
