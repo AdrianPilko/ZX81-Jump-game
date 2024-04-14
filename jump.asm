@@ -170,6 +170,7 @@ initVariables
     ld (jumpDelayBackoff), a
     
     xor a
+    ld (moveRoomFlag), a
     ld (score_mem_tens),a
 	ld (score_mem_hund),a    
     ld (currentRoom), a
@@ -213,6 +214,18 @@ waitForTVSync
     cp 1
     jp nz, skipRoomDraw
     call drawRoom
+
+
+    ;; we're resetting player x y and currentPlayerLocation to fixed number
+    ;; this needs to come from room config - player may then start in different location 
+    ld a, 5
+    ld (playerXPos), a
+    ld a, 9
+    ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most
+    ld de, 269    
+    ld hl, Display+1 
+    add hl, de
+    ld (currentPlayerLocation), hl
     
     xor a
     ld (goldFoundInRoom), a
@@ -326,9 +339,15 @@ spriteNextLeft
 moveRight       
     ld a, (playerXPos)
     inc a
-    cp 24
+    cp 24          ;;; this prevents the player moving past edge, but if it's a door
+                   ;; trigger seperate code to move to new room
+    ;jp z, updateRestOfScreen   
+    push af   ;; preserve flags (as well as register a)
+    call z, checkAtDoorRight    
+    pop af    ;; restore flags (as well as register a)
     jp z, updateRestOfScreen   
     ld (playerXPos), a
+    
     
     
     ld hl, (currentPlayerLocation)
@@ -373,6 +392,10 @@ setYSpeed    ;;; we've allowed the jusp to happen - can't keep jumping in mid ai
  
 
 updateRestOfScreen    
+    ld a, (moveRoomFlag)
+    cp 1
+    call z, executeMoveRoom
+    
     ld a, (YSpeed)
     cp 0
     jp nz, jumpUpLoopExe
@@ -428,12 +451,14 @@ skipLandPlayer
       
 skipMove                
 
-    ld a, (goldFoundInRoom)
+;;; player x,y debug
+    ld de, 34
+    ld a, (playerXPos)
+    call print_number8bits    
+    ld a, (playerYPos)
     ld de, 38
     call print_number8bits
-    ;ld de, 34
-    ;ld a, (playerYPos)
-    ;call print_number8bits    
+
    
     jp gameLoop
     
@@ -526,27 +551,75 @@ doorClearLoop
     ;; we'll also need to set a flag to allow move to next room
 noDoorClear
     ret
+    
+;;; set a move room flag is attempted to move to a door on right (will need checkAtDoorLeft later)
+;; only check if player is at edge from moveRight code
+checkAtDoorRight
+    ;; ok doors are always on edge of room so use currentPlayerLocation
+    ;; to check if the wall next to us is blank
+    ld hl, (currentPlayerLocation)  ;; remember this is the top right position of 8*8 player
+    ld de, 8   ; add 9 to currentPlayerLocation giving the boarder 
+    add hl, de
+    ld a, (hl)
+    cp 0
+    jp z, setMoveRoomFlag
+    jp noMoveRoomFlag
+setMoveRoomFlag    
+    ld a, 1
+    ld (moveRoomFlag), a
+
+    ;ld de, moveRoomDebugFlagText
+    ;ld bc, 91
+    ;call printstring
+    
+noMoveRoomFlag
+    ret
+    
+executeMoveRoom
+    xor a
+    ld (moveRoomFlag), a  ; first thing clear this flag otherwise continually move room :)
+    ld de, moveRoomDebugTest
+    ld bc, 76
+    call printstring
+    ld a, 1
+    ld (roomJustEnteredFlag), a   ; set this will trigger a full room redraw
+    ld a, (currentRoom) 
+    inc a
+    ld (currentRoom), a
+    
+    ret 
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 drawRoom
     call CLS
-    ld a, (currentRoom)    
     ld hl, RoomConfig
-    ld de, 32
-    ld b,a    
+    ld a, (currentRoom)    
     cp 0
-    jp skipCalcualteRoomCOnfig
+    jp z, skipCalcualteRoomCOnfig   
+    ld de, 44 ; this is the current length of room, will need revisiting if it gets longer
+    ld b,a       
 drawRoomCalcOffsetToRoom    
     ;;; ad 32 to offset to get next room
     add hl, de 
     djnz drawRoomCalcOffsetToRoom
 skipCalcualteRoomCOnfig
     ld (RoomConfigAddress), hl
+    push hl
+    ld bc, (RoomConfigAddress)     ;; currentPlayerLocation is already offset to
+    ld de, 87
+    call print_number16bits
+    pop hl
     
     ; draw full boarder for every room   
     ld de, TopLineText
     ld bc, 2
     call printstring
+    
+    ld a, (currentRoom)
+    daa
+    ld de, 11
+    call print_number8bits
     
     
     ld de, 33    
@@ -1047,6 +1120,10 @@ blockFilled    ;8*10
     DEFB   8,  8,  8,  8,  8,  8,  8,  8    
 TopLineText
     DEFB _J,_U,_M,_P, 136, _R, _O, _0, _M, 0, 28, 28, 0,136,136, _G, _O, _L, _D, 28, 28, 0,136, 136, 136,_B,_Y,_T,_E,32,$ff
+moveRoomDebugTest
+    DEFB _M,_O,_V,_E,_R,_O,_O,_M,$ff
+moveRoomDebugFlagText
+    DEFB _F,_L,_A,_G, $ff    
 compareValueGround
     DEFB 0
 comparePlatformOrGround
@@ -1076,6 +1153,8 @@ justJumpFlag
 goldFoundCount
     DEFB 0
 goldFoundInRoom
+    DEFB 0
+moveRoomFlag
     DEFB 0
 ;================== Room config design - may only be partially implemented
 ;; fixed length of 32 bytes per room
@@ -1154,7 +1233,133 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFB 255  ;  
 
 
-   
+    DEFB 1    ; room ID
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 460   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    
+    DEFB 8    ; character of platform 0 = disabled  (byte16)
+    DEFW 610  ; start of platform   17,18
+    DEFB 6    ; length   19
+    
+    DEFB 137    ; character of platform 0 = disabled  20
+    DEFW 454  ; start of platform  21,22
+    DEFB 3    ; length  23
+    
+    DEFB 128    ; character of platform 0 = disabled  24
+    DEFW 364  ; start of platform  25,26
+    DEFB 17    ; length             (byte 27)
+    ;;; tokens 2 bytes each
+    DEFW 222  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 715  ; treasure token offset from DF_CC
+    DEFW 168  ; treasure token offset from DF_CC
+    DEFW 752  ; treasure token offset from DF_CC
+    DEFB 255  ;   spare
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;  
+
+
+;;; rooms need defining this is just a copy of room 0
+
+    DEFB 2    ; room ID   
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 196   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    
+    DEFB 8    ; character of platform 0 = disabled  (byte16)
+    DEFW 610  ; start of platform   17,18
+    DEFB 6    ; length   19
+    
+    DEFB 137    ; character of platform 0 = disabled  20
+    DEFW 454  ; start of platform  21,22
+    DEFB 6    ; length  23
+    
+    DEFB 128    ; character of platform 0 = disabled  24
+    DEFW 364  ; start of platform  25,26
+    DEFB 17    ; length             (byte 27)
+    ;;; tokens 2 bytes each
+    DEFW 211  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 483  ; treasure token offset from DF_CC
+    DEFW 168  ; treasure token offset from DF_CC
+    DEFW 752  ; treasure token offset from DF_CC
+    DEFB 255  ;   spare
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;  
+
+
+
+    DEFB 3    ; room ID   
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 196   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    
+    DEFB 8    ; character of platform 0 = disabled  (byte16)
+    DEFW 610  ; start of platform   17,18
+    DEFB 1    ; length   19
+    
+    DEFB 137    ; character of platform 0 = disabled  20
+    DEFW 454  ; start of platform  21,22
+    DEFB 1    ; length  23
+    
+    DEFB 128    ; character of platform 0 = disabled  24
+    DEFW 364  ; start of platform  25,26
+    DEFB 1    ; length             (byte 27)
+    ;;; tokens 2 bytes each
+    DEFW 55  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 55  ; treasure token offset from DF_CC
+    DEFW 55  ; treasure token offset from DF_CC
+    DEFW 55  ; treasure token offset from DF_CC
+    DEFB 255  ;   spare
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;
+    DEFB 255  ;     
     
 VariablesEnd:   DEFB $80
 BasicEnd: 
