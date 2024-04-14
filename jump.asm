@@ -209,7 +209,7 @@ waitForTVSync
     ld (roomJustEnteredFlag),a
     
 skipRoomDraw     
-    call drawPlatforms   ; always do this as jump may corrupt them  
+;    call drawPlatforms   ; always do this as jump may corrupt them  
 
     call checkIfPlatformOrGround   ; sets groundPlatFlag
     
@@ -242,7 +242,8 @@ skipsetBlankSprite
     ld c, 8
     ld b, 8    
     call drawSprite
-
+    
+    call drawPlatforms   ; always do this as jump may corrupt them  
 
 ; keyboard layout for reading keys on ZX81
 ; BIT   left block      right block  BIT
@@ -604,11 +605,15 @@ drawPlatforms
     ;ld de, (RoomConfigAddress)
     ;ld hl, 16
     ;;add hl, de
-    ;ld a, (hl)     
-    ld a, SHAPE_CHAR_WALL ; force all platforms to be same to help ease checking landed
+    ;ld a, (hl)         
     ld hl, (platformStartAddress)
 drawPlatform1
+    ld a, (hl)
+    cp 0
+    jr nz, skipDrawAlreadySprite1            
+    ld a, SHAPE_CHAR_WALL ; force all platforms to be same to help ease checking landed
     ld (hl), a
+skipDrawAlreadySprite1    
     inc hl
     djnz drawPlatform1
 
@@ -635,10 +640,14 @@ drawPlatform1
     ; ld hl, 20
     ; add hl, de
     ; ld a, (hl)     
-    ld a, SHAPE_CHAR_WALL 
     ld hl, (platformStartAddress)
 drawPlatform2
+    ld a, (hl)
+    cp 0
+    jp nz, skipDrawAlreadySprite2
+    ld a, SHAPE_CHAR_WALL ; force all platforms to be same to help ease checking landed
     ld (hl), a
+skipDrawAlreadySprite2    
     inc hl
     djnz drawPlatform2
 
@@ -664,12 +673,17 @@ drawPlatform2
     ; ld de, (RoomConfigAddress)
     ; ld hl, 24
     ; add hl, de
-    ; ld a, (hl)  
-    ld a, SHAPE_CHAR_WALL     
+    ; ld a, (hl)      
     ld hl, (platformStartAddress)
 drawPlatform3
+    ld a, (hl)
+    cp 0
+    jp nz, skipDrawAlreadySprite3
+    ld a, SHAPE_CHAR_WALL ; force all platforms to be same to help ease checking landed
     ld (hl), a
+skipDrawAlreadySprite3
     inc hl
+
     djnz drawPlatform3
     
     ret
@@ -957,7 +971,7 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFB 0    ; room ID
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
-    DEFW 97   ; offset from DF_CC to top of door
+    DEFW 196   ; offset from DF_CC to top of door
     DEFB 8    ; 9 blocks high
     DEFB 1    ; ID of next room from this one
     DEFB 0    ; Door orientation east=1  0= door disabled
