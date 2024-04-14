@@ -31,10 +31,17 @@
 CLS				EQU $0A2A
 ;;;;;#define DEBUG_NO_SCROLL
 
+
+#define KEYBOARD_READ_PORT_P_TO_Y	$DF
+; for start key 
+#define KEYBOARD_READ_PORT_A_TO_G	$FD
 ; keyboard port for shift key to v
 #define KEYBOARD_READ_PORT_SHIFT_TO_V $FE
 ; keyboard space to b
 #define KEYBOARD_READ_PORT_SPACE_TO_B $7F 
+; keyboard q to t
+#define KEYBOARD_READ_PORT_Q_TO_T $FB
+
 ; starting port numbner for keyboard, is same as first port for shift to v
 #define KEYBOARD_READ_PORT $FE 
 #define SCREEN_WIDTH 32
@@ -234,23 +241,41 @@ skipsetBlankSprite
     ld de, (currentPlayerLocation)
     ld c, 8
     ld b, 8    
-    call drawSprite 
+    call drawSprite
+
+
+; keyboard layout for reading keys on ZX81
+; BIT   left block      right block  BIT
+; off                                off in <port>, when ld a, <port>
+;       0  1 2 3 4     4 3 2 1 0                 <<< bit to check for each column after in a, $fe 
+; 3   ( 1  2 3 4 5 ) ( 6 7 8 9 0 )     4
+; 2   ( Q  W E R T ) ( Y U I O P )     5
+; 1   ( A  S D F G ) ( H I K L n/l)    6
+; 0   (sft Z X C V ) ( B N M . spc)    7
+;
+; to read keys 1 2 3 4 5
+; set all bits except bit 3 of register A = 1 1 1 1 0 1 1 1= f7, then execute in a, $fe  (fe is the "keyboard read port")
+; now register a will contain a bit pattern to check for which key in that block was set, eg Key "1" = bit 0 of a
+; ld a, $f7    
+; in a, $fe    
+; similarly for the rest, to read from block A S D F G, set a to 1 1 1 1 1 1 1 0 1 = $fd
+
     
     ;; read keys
-    ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
+    ld a, KEYBOARD_READ_PORT_P_TO_Y			
     in a, (KEYBOARD_READ_PORT)					; read from io port	
-    bit 1, a                            ; Z
+    bit 1, a                            ; O
     jp z, moveLeft
 
 
-    ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
+    ld a, KEYBOARD_READ_PORT_P_TO_Y			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
-    bit 3, a					        ; N
+    bit 0, a					        ; P
     jp z, moveRight
     
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
-    bit 2, a						    ; M
+    bit 0, a						    ; SPACE
     jp z, doJump
      
     jp updateRestOfScreen                       ; if no key pressed continue
@@ -280,7 +305,7 @@ moveLeft
 
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
-    bit 2, a						    ; M
+    bit 0, a						    ; SPACE
     jp z, doJump
     
     jp updateRestOfScreen 
@@ -317,7 +342,7 @@ moveRight
 
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
-    bit 2, a						    ; M
+    bit 0, a						    ; SPACE
     jp z, doJump
     
     jp updateRestOfScreen 
@@ -399,6 +424,7 @@ skipMove
 
 ;set a flag if the next row is platform or ground    
 checkIfPlatformOrGround
+#ifdef DEBUG_GROUND
 ;;;;;;;; start of debug
     ld bc, (currentPlayerLocation)     ;; currentPlayerLocation is already offset to
     ld de, 42
@@ -419,6 +445,7 @@ checkIfPlatformOrGround
     ld de, 52
     call print_number16bits    
 ;;;;;;;;;; END OF DEBUG
+#endif
 
     ld hl, (currentPlayerLocation)     ;; currentPlayerLocation is already offset to Display+1    
     ld de, 266    ; offset hl to +1 row from bottom of sprite
@@ -522,6 +549,28 @@ doorDrawLoop
     ld de,33
     add hl, de
     djnz doorDrawLoop
+
+    ld hl, 28        
+    ld b, 4
+drawTreasure    
+    ld de, (RoomConfigAddress)    
+    push hl
+        add hl, de    
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d    
+    
+    pop hl
+        inc hl 
+        inc hl
+    push hl       
+        ld hl, (DF_CC)
+        add hl, de 
+        ld a, 141    ; inverse $ for treasure
+        ld (hl), a
+    pop hl
+    djnz drawTreasure    
+
     
 drawPlatforms
     ;; this is long winded approach becasue on zx81 can't use the iy or ix registers todo offsets
@@ -613,7 +662,6 @@ drawPlatform3
     ld (hl), a
     inc hl
     djnz drawPlatform3
-        
     
     ret
 
@@ -633,7 +681,7 @@ drawSprite
     push bc    
     push de
     ld b, 0               ;; just doing columns in c so zero b
-    ldir                  ;; ldir repeats ld (de), (hl) until bc = 0
+    ldir                  ;; ldir repeats ld (de), (hl) until bc = 0 and increments hl and de
     pop de
     ex de, hl    
     ld bc, 33             ;; move next write position to next row
@@ -642,7 +690,33 @@ drawSprite
     pop bc
     djnz drawSprite    
     ret
-     
+
+
+;;; work in progrerss currently crashes - 
+;; if this could be made to work then the platforms would appear in blank bits of sprite
+;; which would made game play better
+drawSprite_OR_BACKGROUND         
+    push bc    
+    push de
+    
+    ld b, c    ; get column loop counter in b 
+drawSprite_OR_ColLoop
+    ld a, (hl)
+    inc hl
+    or d
+    or e
+    ld (de), a
+    inc de
+    djnz drawSprite_OR_ColLoop
+
+    pop de
+    ex de, hl    
+    ld bc, 33             ;; move next write position to next row
+    add hl, bc
+    ex de, hl
+    pop bc
+    djnz drawSprite_OR_BACKGROUND    
+    ret     
         
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
 printstring
@@ -897,13 +971,13 @@ RoomConfig          ; each room is fixed at 32 bytes long
     
     DEFB 128    ; character of platform 0 = disabled  24
     DEFW 331  ; start of platform  25,26
-    DEFB 8    ; length             (byte 27)
+    DEFB 17    ; length             (byte 27)
     ;;; tokens 2 bytes each
-    DEFB 141  ; $ treasure token char  (zero = not valid) (byte 28)
-    DEFW 211  ; offset from DF_CC
-    DEFB 141  ; $
-    DEFW 483  ; offset from DF_CC
-    DEFB 255  ;
+    DEFW 211  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 483  ; treasure token offset from DF_CC
+    DEFW 168  ; treasure token offset from DF_CC
+    DEFW 752  ; treasure token offset from DF_CC
+    DEFB 255  ;   spare
     DEFB 255  ;
     DEFB 255  ;
     DEFB 255  ;
@@ -913,44 +987,7 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFB 255  ;  
 
 
-    DEFB 1    ; room ID  (FOR NOW EVERYTHING ELSE IS A COPY)
-    ;;; DOORS  * 3 max enabled  
-    DEFB 1    ; Door orientation east=1  0= door disabled
-    DEFW 65   ; offset from DF_CC to top of door
-    DEFB 9    ; 9 blocks high
-    DEFB 1    ; ID of next room from this one
-    DEFB 0    ; Door orientation east=1  0= door disabled
-    DEFW 0   ; offset from DF_CC to top of door
-    DEFB 0    ; 9 blocks high
-    DEFB 0    ; ID of next room from this one
-    DEFB 0    ; Door orientation east=1  0= door disabled
-    DEFW 0   ; offset from DF_CC to top of door
-    DEFB 0    ; 9 blocks high
-    DEFB 0    ; ID of next room from this one  (byte 15)
-    ;;; platforms max = 3 enabled            
-    DEFB 8    ; character of platform 0 = disabled  (byte16)
-    DEFW 607  ; start of platform
-    DEFB 15    ; length
-    DEFB 0    ; character of platform 0 = disabled
-    DEFW 200  ; start of platform
-    DEFB 5    ; length
-    DEFB 0    ; character of platform 0 = disabled
-    DEFW 607  ; start of platform
-    DEFB 15    ; length             (byte 27)
-    ;;; tokens 2 bytes each
-    DEFB 141  ; $ treasure token char  (zero = not valid) (byte 28)
-    DEFW 211  ; offset from DF_CC
-    DEFB 141  ; $
-    DEFW 483  ; offset from DF_CC
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;  
-    
+   
     
 VariablesEnd:   DEFB $80
 BasicEnd: 
