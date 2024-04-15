@@ -23,6 +23,21 @@
 ;;;
 ;;; https://youtube.com/@byteforever7829
 
+;;; Known bugs
+;;    1) a copy of players feet get left behind after a jump
+;;    2) if the gold is landed on from top the score doesn't increase and stuck in room
+
+;;; todo list 
+;;    1) add enemy sprites to room config
+;;    2) add moveable enemy spites
+;;    3) rewrite enemy sprite draw to make it a smaller proper subroutines
+;;    4) design more rooms
+;;    5) add verical bariiers to rooms
+;;    6) add player lives, and killed if hits enemy
+;;    7) add disapearing platforms and to room config
+;;    8) add more platforms
+;;    9) optimise the player check collision with gold to use only outer blocks
+
 ;some #defines for compatibility with other assemblers
 #define         DEFB .byte 
 #define         DEFW .word
@@ -193,7 +208,15 @@ initVariables
     ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most
     ld a, 2
     ld (compareValueGround), a
-       
+    
+    xor a
+    ld (enemySpriteFrame), a
+    ld (enemySpriteOneFrame), a
+    ld hl, enemySpriteZero
+    ld (enemySpritePointerZero), hl
+    ld hl, enemySpriteOne
+    ld (enemySpritePointerOne), hl
+    
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
 gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -214,8 +237,7 @@ waitForTVSync
     cp 1
     jp nz, skipRoomDraw
     call drawRoom
-
-
+   
     ;; we're resetting player x y and currentPlayerLocation to fixed number
     ;; this needs to come from room config - player may then start in different location 
     ld a, 5
@@ -263,6 +285,8 @@ skipsetBlankSprite
     call drawSprite
     
     call drawPlatforms   ; always do this as jump may corrupt them  
+    
+    call drawEnemySprites    
 
 ; keyboard layout for reading keys on ZX81
 ; BIT   left block      right block  BIT
@@ -452,13 +476,14 @@ skipLandPlayer
 skipMove                
 
 ;;; player x,y debug
+#ifdef DEBUG_PLAYER_XY
     ld de, 34
     ld a, (playerXPos)
     call print_number8bits    
     ld a, (playerYPos)
     ld de, 38
     call print_number8bits
-
+#endif
    
     jp gameLoop
     
@@ -606,9 +631,11 @@ drawRoomCalcOffsetToRoom
 skipCalcualteRoomCOnfig
     ld (RoomConfigAddress), hl
     push hl
+#ifdef DEBUG
     ld bc, (RoomConfigAddress)     ;; currentPlayerLocation is already offset to
     ld de, 87
     call print_number16bits
+#endif    
     pop hl
     
     ; draw full boarder for every room   
@@ -928,7 +955,63 @@ justPrintScore
     call printNumber    
     
     ret
-        
+    
+drawEnemySprites    
+    ld a, (enemySpriteFrame)
+    inc a
+    cp 3
+    jp z, resetEnemySpriteZ 
+    
+    ld (enemySpriteFrame), a
+    ld hl, (enemySpritePointerZero)
+    ld de,16     ; 4 by 4 blocks
+    add hl, de
+    ld (enemySpritePointerZero), hl    
+    
+    jp skipResetEnemySpriteZ     
+resetEnemySpriteZ    
+    xor a
+    ld (enemySpriteFrame), a
+    ld hl, enemySpriteZero
+    ld (enemySpritePointerZero), hl
+skipResetEnemySpriteZ         
+    ld de, 640
+    ld hl, Display+1 
+    add hl, de
+    ex de, hl
+    ld hl, (enemySpritePointerZero)
+    ld b, 4
+    ld c, 4
+    call drawSprite         
+
+    ld a, (enemySpriteOneFrame)
+    inc a
+    cp 3
+    jp z, resetEnemySpriteOne 
+    
+    ld (enemySpriteOneFrame), a
+    ld hl, (enemySpritePointerOne)
+    ld de,16     ; 4 by 4 blocks
+    add hl, de
+    ld (enemySpritePointerOne), hl    
+    
+    jp skipResetEnemySpriteOne     
+resetEnemySpriteOne    
+    xor a
+    ld (enemySpriteOneFrame), a
+    ld hl, enemySpriteOne
+    ld (enemySpritePointerOne), hl
+skipResetEnemySpriteOne         
+    ld de, 113
+    ld hl, Display+1 
+    add hl, de
+    ex de, hl
+    ld hl, (enemySpritePointerOne)
+    ld b, 4
+    ld c, 4
+    call drawSprite       
+    ret    
+    
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
 printstring
     push de ; preserve de
@@ -1118,6 +1201,23 @@ blockFilled    ;8*10
     DEFB   8,  8,  8,  8,  8,  8,  8,  8
     DEFB   8,  8,  8,  8,  8,  8,  8,  8     
     DEFB   8,  8,  8,  8,  8,  8,  8,  8    
+
+enemySprites   ;; keeping these to 4*4 for speed and size
+enemySpriteZero
+	DEFB $07, $03, $03, $84, $05, $00, $00, $85, $05, $00, $00, $85,
+	DEFB $82, $83, $83, $81, $87, $83, $83, $04, $85, $00, $00, $05,
+	DEFB $85, $00, $00, $05, $02, $03, $03, $01, $00, $00, $00, $00,
+	DEFB $00, $07, $84, $00, $00, $82, $81, $00, $00, $00, $00, $00,
+	DEFB $00, $00, $00, $00, $00, $87, $04, $00, $00, $02, $01, $00,
+	DEFB $00, $00, $00, $00
+enemySpriteOne
+	DEFB $00, $85, $05, $00, $83, $81, $82, $83, $03, $84, $07, $03,
+	DEFB $00, $85, $05, $00, $00, $02, $01, $00, $04, $81, $82, $87,
+	DEFB $01, $84, $07, $02, $00, $87, $04, $00, $00, $85, $05, $00,
+	DEFB $83, $87, $04, $83, $03, $02, $01, $03, $00, $85, $05, $00,
+	DEFB $00, $85, $05, $00, $83, $06, $86, $83, $03, $86, $06, $03,
+	DEFB $00, $85, $05, $00
+    
 TopLineText
     DEFB _J,_U,_M,_P, 136, _R, _O, _0, _M, 0, 28, 28, 0,136,136, _G, _O, _L, _D, 28, 28, 0,136, 136, 136,_B,_Y,_T,_E,32,$ff
 moveRoomDebugTest
@@ -1156,6 +1256,14 @@ goldFoundInRoom
     DEFB 0
 moveRoomFlag
     DEFB 0
+enemySpriteFrame    
+    DEFB 0
+enemySpriteOneFrame
+    DEFB 0
+enemySpritePointerZero    
+    DEFW 0 
+enemySpritePointerOne    
+    DEFW 0
 ;================== Room config design - may only be partially implemented
 ;; fixed length of 32 bytes per room
 
@@ -1209,7 +1317,7 @@ RoomConfig          ; each room is fixed at 32 bytes long
     
     DEFB 8    ; character of platform 0 = disabled  (byte16)
     DEFW 610  ; start of platform   17,18
-    DEFB 6    ; length   19
+    DEFB 4    ; length   19
     
     DEFB 137    ; character of platform 0 = disabled  20
     DEFW 454  ; start of platform  21,22
@@ -1223,14 +1331,12 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFW 483  ; treasure token offset from DF_CC
     DEFW 168  ; treasure token offset from DF_CC
     DEFW 752  ; treasure token offset from DF_CC
-    DEFB 255  ;   spare
+    DEFB 0    ; enemy 1 sprite id
+    DEFW 238  ; enemy 1start address
+    DEFW 242  ; enemy 1end address
     DEFB 255  ;
     DEFB 255  ;
     DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;  
 
 
     DEFB 1    ; room ID
@@ -1258,8 +1364,8 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFB 3    ; length  23
     
     DEFB 128    ; character of platform 0 = disabled  24
-    DEFW 364  ; start of platform  25,26
-    DEFB 17    ; length             (byte 27)
+    DEFW 370  ; start of platform  25,26
+    DEFB 5    ; length             (byte 27)
     ;;; tokens 2 bytes each
     DEFW 222  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 715  ; treasure token offset from DF_CC
