@@ -1221,7 +1221,6 @@ skipCalcualteRoomCOnfig_E
     pop hl
     inc hl
     inc hl   
-
     
     ld hl, 1
     ld (enemySpriteZeroPos_DIR), hl
@@ -1621,11 +1620,11 @@ Room_2_Config
     DEFW 170  ; treasure token offset from DF_CC
     DEFW 171  ; treasure token offset from DF_CC
     
-    DEFW 113  ; enemySpriteZeroPos_ST 
+    DEFW 120  ; enemySpriteZeroPos_ST 
     DEFW 640  ; enemySpriteOnePos_ST  
-    DEFW 122  ; enemySpriteZeroPos_END
-    DEFW 647  ; enemySpriteOnePos_END 
-    DEFW 113  ; enemySpriteZeroPos_CUR
+    DEFW 126  ; enemySpriteZeroPos_END
+    DEFW 643  ; enemySpriteOnePos_END 
+    DEFW 120  ; enemySpriteZeroPos_CUR
     DEFW 640  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
@@ -1694,6 +1693,48 @@ Room_2_Config
     
     DEFB 8    ; character of platform 0 = disabled  (byte16)
     DEFW 610  ; start of platform   17,18
+    DEFB 2    ; length   19
+    
+    DEFB 137    ; character of platform 0 = disabled  20
+    DEFW 454  ; start of platform  21,22
+    DEFB 2    ; length  23
+    
+    DEFB 128    ; character of platform 0 = disabled  24
+    DEFW 364  ; start of platform  25,26
+    DEFB 2   ; length             (byte 27)
+    ;;; tokens 2 bytes each
+    DEFW 513  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 514  ; treasure token offset from DF_CC
+    DEFW 515  ; treasure token offset from DF_CC
+    DEFW 516  ; treasure token offset from DF_CC
+    DEFW 631  ; enemySpriteZeroPos_ST 
+    DEFW 104  ; enemySpriteOnePos_ST  
+    DEFW 652  ; enemySpriteZeroPos_END
+    DEFW 122  ; enemySpriteOnePos_END 
+    DEFW 640  ; enemySpriteZeroPos_CUR
+    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 1    ; enemySpriteOnePos_DIR 
+
+
+    DEFB 4    ; room ID   
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 196   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    
+    DEFB 8    ; character of platform 0 = disabled  (byte16)
+    DEFW 610  ; start of platform   17,18
     DEFB 1    ; length   19
     
     DEFB 137    ; character of platform 0 = disabled  20
@@ -1716,6 +1757,7 @@ Room_2_Config
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
+
     
 VariablesEnd:   DEFB $80
 BasicEnd: 
