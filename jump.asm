@@ -217,6 +217,47 @@ initVariables
     ld hl, enemySpriteOne
     ld (enemySpritePointerOne), hl
     
+    ld de, 640
+    ld hl, Display+1 
+    add hl, de
+    ld (enemySpriteZeroPos_ST), hl
+
+    ld de, 113
+    ld hl, Display+1 
+    add hl, de
+    ld (enemySpriteOnePos_ST), hl    
+
+    ld de, 647
+    ld hl, Display+1 
+    add hl, de
+    ld (enemySpriteZeroPos_END), hl
+
+    ld de, 122
+    ld hl, Display+1 
+    add hl, de
+    ld (enemySpriteOnePos_END), hl    
+
+
+    ld de, 640
+    ld hl, Display+1 
+    add hl, de
+    ld (enemySpriteZeroPos_CUR), hl
+
+    ld de, 113
+    ld hl, Display+1 
+    add hl, de
+    ld (enemySpriteOnePos_CUR), hl    
+
+    
+    ld hl, 1
+    ld (enemySpriteZeroPos_DIR), hl
+    ld hl, 1
+    ld (enemySpriteOnePos_DIR), hl    
+
+    ld hl, enemySprite4by4Blank
+    ld (enemySprite4by4BlankPointer), hl
+
+    
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
 gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -286,8 +327,10 @@ skipsetBlankSprite
     
     call drawPlatforms   ; always do this as jump may corrupt them  
     
-    call drawEnemySprites    
-
+    call blankEnemySprites
+    call drawEnemySprites        
+    call updateEnemySpritePositions
+    
 ; keyboard layout for reading keys on ZX81
 ; BIT   left block      right block  BIT
 ; off                                off in <port>, when ld a, <port>
@@ -955,11 +998,99 @@ justPrintScore
     call printNumber    
     
     ret
+updateEnemySpritePositions
+    ;check the direction then decide which ST or END to compare
+    ld hl, (enemySpriteZeroPos_DIR)
+    ld a, l
+    cp 1
+    jp z, compareEndPos_Z
+    ;; else compare _ST
+    jp compare_Z_ST
+compareEndPos_Z    
+    ld hl, (enemySpriteZeroPos_CUR)
+    ld de, (enemySpriteZeroPos_END)
+    inc hl
+    ld a, h
+    cp d
+    jp nz, actuallyUpdateEnemy_Z
+    ld a, l
+    cp e
+    jp nz, actuallyUpdateEnemy_Z
+    ;; else we have hit the end
+    ld hl, -1
+    ld (enemySpriteZeroPos_DIR), hl
+    jp actuallyUpdateEnemy_Z
+compare_Z_ST   ; this is the else compare with _ST    
+    ld hl, (enemySpriteZeroPos_CUR)
+    ld de, (enemySpriteZeroPos_ST)
+    inc hl
+    ld a, h
+    cp d
+    jp nz, actuallyUpdateEnemy_Z
+    ld a, l
+    cp e
+    jp nz, actuallyUpdateEnemy_Z
+    ;; else we have hit the end
+    ld hl, 1
+    ld (enemySpriteZeroPos_DIR), hl
+   
+actuallyUpdateEnemy_Z
+    ld hl, (enemySpriteZeroPos_CUR)
+    ld de, (enemySpriteZeroPos_DIR)
+    add hl, de
+    ld (enemySpriteZeroPos_CUR), hl
+
+
+;;; sprite 2
+    ;check the direction then decide which ST or END to compare
+    ld hl, (enemySpriteOnePos_DIR)
+    ld a, l
+    cp 1
+    jp z, compareEndPos_One
+    ;; else compare _ST
+    jp compare_One_ST
+compareEndPos_One    
+    ld hl, (enemySpriteOnePos_CUR)
+    ld de, (enemySpriteOnePos_END)
+    inc hl
+    ld a, h
+    cp d
+    jp nz, actuallyUpdateEnemy_One
+    ld a, l
+    cp e
+    jp nz, actuallyUpdateEnemy_One
+    ;; else we have hit the end
+    ld hl, -1
+    ld (enemySpriteOnePos_DIR), hl
+    jp actuallyUpdateEnemy_One
+compare_One_ST   ; this is the else compare with _ST    
+    ld hl, (enemySpriteOnePos_CUR)
+    ld de, (enemySpriteOnePos_ST)
+    inc hl
+    ld a, h
+    cp d
+    jp nz, actuallyUpdateEnemy_One
+    ld a, l
+    cp e
+    jp nz, actuallyUpdateEnemy_One
+    ;; else we have hit the end
+    ld hl, 1
+    ld (enemySpriteOnePos_DIR), hl
+   
+actuallyUpdateEnemy_One
+    ld hl, (enemySpriteOnePos_CUR)
+    ld de, (enemySpriteOnePos_DIR)
+    add hl, de
+    ld (enemySpriteOnePos_CUR), hl
+    
+
+    
+    ret
     
 drawEnemySprites    
     ld a, (enemySpriteFrame)
     inc a
-    cp 3
+    cp 4
     jp z, resetEnemySpriteZ 
     
     ld (enemySpriteFrame), a
@@ -975,10 +1106,7 @@ resetEnemySpriteZ
     ld hl, enemySpriteZero
     ld (enemySpritePointerZero), hl
 skipResetEnemySpriteZ         
-    ld de, 640
-    ld hl, Display+1 
-    add hl, de
-    ex de, hl
+    ld de, (enemySpriteZeroPos_CUR)
     ld hl, (enemySpritePointerZero)
     ld b, 4
     ld c, 4
@@ -1002,15 +1130,23 @@ resetEnemySpriteOne
     ld hl, enemySpriteOne
     ld (enemySpritePointerOne), hl
 skipResetEnemySpriteOne         
-    ld de, 113
-    ld hl, Display+1 
-    add hl, de
-    ex de, hl
+    ld de, (enemySpriteOnePos_CUR)
     ld hl, (enemySpritePointerOne)
     ld b, 4
     ld c, 4
-    call drawSprite       
+    call drawSprite     
     ret    
+    
+    
+blankEnemySprites    
+    ld de, (enemySpriteZeroPos_CUR)
+    dec de
+    ld hl, (enemySprite4by4BlankPointer)
+    ld b, 4
+    ld c, 6
+    call drawSprite    
+    
+    ret 
     
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
 printstring
@@ -1202,7 +1338,33 @@ blockFilled    ;8*10
     DEFB   8,  8,  8,  8,  8,  8,  8,  8     
     DEFB   8,  8,  8,  8,  8,  8,  8,  8    
 
+enemySpriteZeroPos_ST   ;; these are calculated in the initialiseVariable section relative to Display+1
+    DEFW 0
+enemySpriteOnePos_ST    
+    DEFW 0
+enemySpriteZeroPos_END
+    DEFW 0
+enemySpriteOnePos_END   
+    DEFW 0
+enemySpriteZeroPos_DIR
+    DEFW 0
+enemySpriteOnePos_DIR  
+    DEFW 0
+enemySpriteZeroPos_CUR
+    DEFW 0
+enemySpriteOnePos_CUR
+    DEFW 0
+        
 enemySprites   ;; keeping these to 4*4 for speed and size
+enemySprite4by4BlankPointer
+    DEFW 0
+enemySprite4by4Blank
+    DEFB 0, 0, 0 ,0, 0, 0
+    DEFB 0, 0, 0 ,0, 0, 0
+    DEFB 0, 0, 0 ,0, 0, 0
+    DEFB 0, 0, 0 ,0, 0, 0
+    DEFB 0, 0, 0 ,0, 0, 0 
+
 enemySpriteZero
 	DEFB $07, $03, $03, $84, $05, $00, $00, $85, $05, $00, $00, $85,
 	DEFB $82, $83, $83, $81, $87, $83, $83, $04, $85, $00, $00, $05,
@@ -1217,6 +1379,8 @@ enemySpriteOne
 	DEFB $83, $87, $04, $83, $03, $02, $01, $03, $00, $85, $05, $00,
 	DEFB $00, $85, $05, $00, $83, $06, $86, $83, $03, $86, $06, $03,
 	DEFB $00, $85, $05, $00
+
+
     
 TopLineText
     DEFB _J,_U,_M,_P, 136, _R, _O, _0, _M, 0, 28, 28, 0,136,136, _G, _O, _L, _D, 28, 28, 0,136, 136, 136,_B,_Y,_T,_E,32,$ff
