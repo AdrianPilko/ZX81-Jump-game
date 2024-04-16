@@ -45,6 +45,7 @@
 #define         ORG  .org
 CLS				EQU $0A2A
 ;;;;;#define DEBUG_NO_SCROLL
+#define DEBUG_PLAYER_XY
 
 
 #define KEYBOARD_READ_PORT_P_TO_Y	$DF
@@ -64,6 +65,9 @@ CLS				EQU $0A2A
 #define SHAPE_CHAR_WALL 189
 #define TREASURE_CHARACTER 141  ; $$$$
 
+#define INITIAL_PLAYER_X  6
+#define INITIAL_PLAYER_Y  3
+#define INITIAL_PLAYER_OFFSET 468
 
 VSYNCLOOP       EQU      3
 
@@ -195,17 +199,19 @@ initVariables
     ld (roomJustEnteredFlag), a
     xor a  ; fastest way to zero register a
     ld (YSpeed), a
-    ld de, 269    
+    
+    ld de, INITIAL_PLAYER_OFFSET    
     ld hl, Display+1 
     add hl, de
     ld (currentPlayerLocation), hl
-    ld (previousPlayerLocation), hl
-    ld hl, playerSpriteRightMove
-    ld (playerSpritePointer), hl
-    ld a, 5
+    ld (previousPlayerLocation), hl    
+    ld a, INITIAL_PLAYER_X
     ld (playerXPos), a
-    ld a, 9
-    ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most
+    ld a, INITIAL_PLAYER_Y
+    ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most    
+    
+    ld hl, playerSpriteRightMove
+    ld (playerSpritePointer), hl 
     ld a, 2
     ld (compareValueGround), a
     
@@ -281,13 +287,13 @@ waitForTVSync
    
     ;; we're resetting player x y and currentPlayerLocation to fixed number
     ;; this needs to come from room config - player may then start in different location 
-    ld a, 5
+    ld a, INITIAL_PLAYER_X
     ld (playerXPos), a
-    ld a, 9
-    ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most
-    ld de, 269    
+    ld a, INITIAL_PLAYER_Y
+    ld (playerYPos), a      ; this is the position above the bottom so 0 is the bottom most    
+    ld de, INITIAL_PLAYER_OFFSET    
     ld hl, Display+1 
-    add hl, de
+    add hl, de    
     ld (currentPlayerLocation), hl
     
     xor a
@@ -1347,7 +1353,7 @@ blockFilled    ;8*10
     DEFB   8,  8,  8,  8,  8,  8,  8,  8     
     DEFB   8,  8,  8,  8,  8,  8,  8,  8    
 
-enemySpriteZeroPos_ST   ;; these are calculated in the initialiseVariable section relative to Display+1
+enemySpriteZeroPos_ST  
     DEFW 0
 enemySpriteOnePos_ST    
     DEFW 0
@@ -1515,7 +1521,7 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFB 1    ; room ID
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
-    DEFW 460   ; offset from DF_CC to top of door
+    DEFW 526   ; offset from DF_CC to top of door
     DEFB 8    ; 9 blocks high
     DEFB 1    ; ID of next room from this one
     DEFB 0    ; Door orientation east=1  0= door disabled
@@ -1540,10 +1546,10 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFW 370  ; start of platform  25,26
     DEFB 5    ; length             (byte 27)
     ;;; tokens 2 bytes each
-    DEFW 222  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
-    DEFW 715  ; treasure token offset from DF_CC
-    DEFW 168  ; treasure token offset from DF_CC
-    DEFW 752  ; treasure token offset from DF_CC
+    DEFW 168  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 169  ; treasure token offset from DF_CC
+    DEFW 170  ; treasure token offset from DF_CC
+    DEFW 171  ; treasure token offset from DF_CC
     DEFB 255  ;   spare
     DEFB 255  ;
     DEFB 255  ;
@@ -1584,10 +1590,10 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFW 364  ; start of platform  25,26
     DEFB 17    ; length             (byte 27)
     ;;; tokens 2 bytes each
-    DEFW 211  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
-    DEFW 483  ; treasure token offset from DF_CC
-    DEFW 168  ; treasure token offset from DF_CC
-    DEFW 752  ; treasure token offset from DF_CC
+    DEFW 332  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 334  ; treasure token offset from DF_CC
+    DEFW 336  ; treasure token offset from DF_CC
+    DEFW 338  ; treasure token offset from DF_CC
     DEFB 255  ;   spare
     DEFB 255  ;
     DEFB 255  ;
