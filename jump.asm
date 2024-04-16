@@ -646,9 +646,12 @@ noMoveRoomFlag
 executeMoveRoom
     xor a
     ld (moveRoomFlag), a  ; first thing clear this flag otherwise continually move room :)
+    
+#ifdef DEBUG_ROOM_MOVE    
     ld de, moveRoomDebugTest
     ld bc, 76
     call printstring
+#endif    
     ld a, 1
     ld (roomJustEnteredFlag), a   ; set this will trigger a full room redraw
     ld a, (currentRoom) 
@@ -1146,6 +1149,12 @@ blankEnemySprites
     ld c, 6
     call drawSprite    
     
+    ld de, (enemySpriteOnePos_CUR)
+    dec de
+    ld hl, (enemySprite4by4BlankPointer)
+    ld b, 4
+    ld c, 6
+    call drawSprite        
     ret 
     
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
@@ -1491,10 +1500,10 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFW 364  ; start of platform  25,26
     DEFB 17    ; length             (byte 27)
     ;;; tokens 2 bytes each
-    DEFW 211  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
-    DEFW 483  ; treasure token offset from DF_CC
-    DEFW 168  ; treasure token offset from DF_CC
-    DEFW 752  ; treasure token offset from DF_CC
+    DEFW 169  ; treasure token offset from DF_CC   always 4 treasure (byte 28)    
+    DEFW 170  ; treasure token offset from DF_CC  307
+    DEFW 422  ; treasure token offset from DF_CC    
+    DEFW 722  ; treasure token offset from DF_CC
     DEFB 0    ; enemy 1 sprite id
     DEFW 238  ; enemy 1start address
     DEFW 242  ; enemy 1end address
