@@ -184,6 +184,9 @@ preinit
 ;; initialise variables that are once per game load/start
 
 initVariables
+
+
+    ;;ld hl, (firstEnemyAddress - Room_1_Config)
 ;; initialise variables per game
     ld a, 10
     ld (jumpDelayBackoff), a
@@ -223,42 +226,7 @@ initVariables
     ld hl, enemySpriteOne
     ld (enemySpritePointerOne), hl
     
-    ld de, 640
-    ld hl, Display+1 
-    add hl, de
-    ld (enemySpriteZeroPos_ST), hl
-
-    ld de, 113
-    ld hl, Display+1 
-    add hl, de
-    ld (enemySpriteOnePos_ST), hl    
-
-    ld de, 647
-    ld hl, Display+1 
-    add hl, de
-    ld (enemySpriteZeroPos_END), hl
-
-    ld de, 122
-    ld hl, Display+1 
-    add hl, de
-    ld (enemySpriteOnePos_END), hl    
-
-
-    ld de, 640
-    ld hl, Display+1 
-    add hl, de
-    ld (enemySpriteZeroPos_CUR), hl
-
-    ld de, 113
-    ld hl, Display+1 
-    add hl, de
-    ld (enemySpriteOnePos_CUR), hl    
-
-    
-    ld hl, 1
-    ld (enemySpriteZeroPos_DIR), hl
-    ld hl, 1
-    ld (enemySpriteOnePos_DIR), hl    
+    call initialiseEnemysForRoom
 
     ld hl, enemySprite4by4Blank
     ld (enemySprite4by4BlankPointer), hl
@@ -557,7 +525,7 @@ checkIfPlatformOrGround
     ld hl, (DF_CC)     ;; currentPlayerLocation is already offset to Display+1    
     push hl
     pop bc
-    ld de, 52
+    ld de, (Room_2_Config - Room_1_Config)  ; this handily calculates the room length from labels :)
     call print_number16bits    
 ;;;;;;;;;; END OF DEBUG
 #endif
@@ -664,6 +632,8 @@ executeMoveRoom
     inc a
     ld (currentRoom), a
     
+    call initialiseEnemysForRoom
+    
     ret 
 
 
@@ -674,7 +644,7 @@ drawRoom
     ld a, (currentRoom)    
     cp 0
     jp z, skipCalcualteRoomCOnfig   
-    ld de, 44 ; this is the current length of room, will need revisiting if it gets longer
+    ld de, 52 ;; should use this but doesn't work: (Room_2_Config - Room_1_Config) 
     ld b,a       
 drawRoomCalcOffsetToRoom    
     ;;; ad 32 to offset to get next room
@@ -1163,6 +1133,102 @@ blankEnemySprites
     call drawSprite        
     ret 
     
+    
+initialiseEnemysForRoom   
+
+    ld hl, RoomConfig
+    ld a, (currentRoom)    
+    cp 0
+    jp z, skipCalcualteRoomCOnfig_E   
+    ld de, 52 ;; should use this but doesn't work: (Room_2_Config - Room_1_Config) 
+    ld b,a       
+drawRoomCalcOffsetToRoom_E    
+    ;;; ad 32 to offset to get next room
+    add hl, de 
+    djnz drawRoomCalcOffsetToRoom_E
+skipCalcualteRoomCOnfig_E
+    ld (RoomConfigAddress), hl
+    ;ld hl, firstEnemyAddress
+    
+    ld de, (RoomConfigAddress)
+    ld hl, 36
+    add hl, de
+    
+    push hl    
+        ld e, (hl)                  ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d
+        ld hl, Display+1 
+        add hl, de 
+        ld (enemySpriteZeroPos_ST), hl
+    pop hl
+    inc hl
+    inc hl
+
+    push hl    
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d
+        ld hl, Display+1 
+        add hl, de 
+        ld (enemySpriteOnePos_ST), hl    
+    pop hl
+    inc hl
+    inc hl
+    
+
+    push hl    
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d
+        ld hl, Display+1 
+        add hl, de 
+    ld (enemySpriteZeroPos_END), hl
+    pop hl
+    inc hl
+    inc hl
+
+    push hl    
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d
+        ld hl, Display+1 
+        add hl, de 
+        ld (enemySpriteOnePos_END), hl    
+    pop hl
+    inc hl
+    inc hl 
+
+
+    push hl    
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d
+        ld hl, Display+1 
+        add hl, de 
+        ld (enemySpriteZeroPos_CUR), hl
+    pop hl
+    inc hl
+    inc hl
+
+    push hl    
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d
+        ld hl, Display+1 
+        add hl, de 
+    ld (enemySpriteOnePos_CUR), hl    
+    pop hl
+    inc hl
+    inc hl   
+
+    
+    ld hl, 1
+    ld (enemySpriteZeroPos_DIR), hl
+    ld (enemySpriteOnePos_DIR), hl      
+
+    ret
+    
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
 printstring
     push de ; preserve de
@@ -1477,7 +1543,7 @@ RoomConfigAddress
 doorStartAddress
     DEFW 0
 RoomConfig          ; each room is fixed at 32 bytes long
-
+Room_1_Config
     DEFB 0    ; room ID
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
@@ -1510,14 +1576,18 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFW 170  ; treasure token offset from DF_CC  307
     DEFW 422  ; treasure token offset from DF_CC    
     DEFW 722  ; treasure token offset from DF_CC
-    DEFB 0    ; enemy 1 sprite id
-    DEFW 238  ; enemy 1start address
-    DEFW 242  ; enemy 1end address
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-
-
+    ;; enemy definition gets loaded into these when room entered
+firstEnemyAddress      ;;  36 bytes
+    DEFW 640  ; enemySpriteZeroPos_ST 
+    DEFW 113  ; enemySpriteOnePos_ST  
+    DEFW 647  ; enemySpriteZeroPos_END
+    DEFW 122  ; enemySpriteOnePos_END 
+    DEFW 640  ; enemySpriteZeroPos_CUR
+    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 1    ; enemySpriteOnePos_DIR 
+    
+Room_2_Config    
     DEFB 1    ; room ID
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
@@ -1550,14 +1620,15 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFW 169  ; treasure token offset from DF_CC
     DEFW 170  ; treasure token offset from DF_CC
     DEFW 171  ; treasure token offset from DF_CC
-    DEFB 255  ;   spare
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;  
+    
+    DEFW 113  ; enemySpriteZeroPos_ST 
+    DEFW 640  ; enemySpriteOnePos_ST  
+    DEFW 122  ; enemySpriteZeroPos_END
+    DEFW 647  ; enemySpriteOnePos_END 
+    DEFW 113  ; enemySpriteZeroPos_CUR
+    DEFW 640  ; enemySpriteOnePos_CUR 
+    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 1    ; enemySpriteOnePos_DIR 
 
 
 ;;; rooms need defining this is just a copy of room 0
@@ -1594,14 +1665,14 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFW 334  ; treasure token offset from DF_CC
     DEFW 336  ; treasure token offset from DF_CC
     DEFW 338  ; treasure token offset from DF_CC
-    DEFB 255  ;   spare
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;  
+    DEFW 640  ; enemySpriteZeroPos_ST 
+    DEFW 113  ; enemySpriteOnePos_ST  
+    DEFW 647  ; enemySpriteZeroPos_END
+    DEFW 122  ; enemySpriteOnePos_END 
+    DEFW 640  ; enemySpriteZeroPos_CUR
+    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 1    ; enemySpriteOnePos_DIR 
 
 
 
@@ -1637,14 +1708,14 @@ RoomConfig          ; each room is fixed at 32 bytes long
     DEFW 55  ; treasure token offset from DF_CC
     DEFW 55  ; treasure token offset from DF_CC
     DEFW 55  ; treasure token offset from DF_CC
-    DEFB 255  ;   spare
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;
-    DEFB 255  ;     
+    DEFW 640  ; enemySpriteZeroPos_ST 
+    DEFW 113  ; enemySpriteOnePos_ST  
+    DEFW 647  ; enemySpriteZeroPos_END
+    DEFW 122  ; enemySpriteOnePos_END 
+    DEFW 640  ; enemySpriteZeroPos_CUR
+    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 1    ; enemySpriteOnePos_DIR 
     
 VariablesEnd:   DEFB $80
 BasicEnd: 
