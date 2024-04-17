@@ -45,7 +45,7 @@
 #define         ORG  .org
 CLS				EQU $0A2A
 ;;;;;#define DEBUG_NO_SCROLL
-#define DEBUG_PLAYER_XY
+;;;;;#define DEBUG_PLAYER_XY
 
 
 #define KEYBOARD_READ_PORT_P_TO_Y	$DF
@@ -72,7 +72,7 @@ CLS				EQU $0A2A
 #define SIZE_OF_ROOM_CONFIG 52
 #define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config
 
-VSYNCLOOP       EQU      3
+VSYNCLOOP       EQU      2
 
 ; character set definition/helpers
 __:				EQU	$00	;spacja
@@ -222,8 +222,11 @@ initVariables
     ld (compareValueGround), a
     
     xor a
-    ld (enemySpriteFrame), a
-    ld (enemySpriteOneFrame), a
+    ld (gameTime_Seconds), a
+    ld (gameTime_Minutes), a
+    ld (gameTimeCounterJIFFIES), a
+    ld (enemySpriteFrameZero), a
+    ld (enemySpriteFrameOne), a
     ld hl, enemySpriteZero
     ld (enemySpritePointerZero), hl
     ld hl, enemySpriteOne
@@ -233,6 +236,8 @@ initVariables
 
     ld hl, enemySprite4by4Blank
     ld (enemySprite4by4BlankPointer), hl
+    
+    
 
     
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
@@ -242,6 +247,8 @@ gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 waitForTVSync	
 	call vsync
 	djnz waitForTVSync
+    
+    call printTime
     
     ld hl, (currentPlayerLocation) ;; hl is the location to start checking
     ld de, -33
@@ -255,7 +262,7 @@ waitForTVSync
     cp 1
     jp nz, skipRoomDraw
     call drawRoom
-   
+    
     ;; we're resetting player x y and currentPlayerLocation to fixed number
     ;; this needs to come from room config - player may then start in different location 
     ld a, INITIAL_PLAYER_X
@@ -272,6 +279,10 @@ waitForTVSync
     ld (roomJustEnteredFlag),a
     
 skipRoomDraw     
+    call blankEnemySprites
+    call drawEnemySprites        
+    call updateEnemySpritePositions
+    
     call checkIfPlatformOrGround   ; sets groundPlatFlag
     
     jp nz, setBiggerBlankSprite
@@ -294,8 +305,8 @@ skipsetBlankSprite
     ex de, hl
     ld hl, blankSprite
     ld c, 8
-    call drawSprite    
-        
+    call drawSprite   
+    
     ld hl, (playerSpritePointer)    
     ld de, (currentPlayerLocation)
     ld c, 8
@@ -303,11 +314,7 @@ skipsetBlankSprite
     call drawSprite
     
     call drawPlatforms   ; always do this as jump may corrupt them  
-    
-    call blankEnemySprites
-    call drawEnemySprites        
-    call updateEnemySpritePositions
-    
+       
 ; keyboard layout for reading keys on ZX81
 ; BIT   left block      right block  BIT
 ; off                                off in <port>, when ld a, <port>
@@ -1068,55 +1075,82 @@ actuallyUpdateEnemy_One
 
     
     ret
+
+
+drawEnemySprites
+    ld hl, (enemySpritePointerZero)
+    ld (TEMP_enemySpritePointer), hl
+    ld hl, (enemySpriteZeroPos_CUR)
+    ld (TEMP_enemySpritePos_CUR), hl
+    ld a, (enemySpriteFrameZero)
+    ld (TEMP_enemySpriteFrame), a
+    ld hl, enemySpriteZero
+    call drawEnemySprite
+    ld hl, (TEMP_enemySpritePointer)
+    ld (enemySpritePointerZero), hl 
+    ld a, (TEMP_enemySpriteFrame)
+    ld (enemySpriteFrameZero), a
     
-drawEnemySprites    
-    ld a, (enemySpriteFrame)
+
+
+    ld hl, (enemySpritePointerOne)
+    ld (TEMP_enemySpritePointer), hl
+    ld hl, (enemySpriteOnePos_CUR)
+    ld (TEMP_enemySpritePos_CUR), hl
+    ld a, (enemySpriteFrameOne)
+    ld (TEMP_enemySpriteFrame), a    
+    ld hl, enemySpriteOne
+    call drawEnemySprite
+    ld hl, (TEMP_enemySpritePointer)
+    ld (enemySpritePointerOne), hl 
+    ld a, (TEMP_enemySpriteFrame)
+    ld (enemySpriteFrameOne), a    
+    
+    ret
+;; before call set these from config
+;; TEMP_enemySpritePointer   
+;; TEMP_enemySpritePos_CUR 
+;; TEMP_enemySpriteFrame
+
+;; set hl to the enemySpritePointer
+;; after call 
+;; ld hl, (TEMP_enemySpritePointer)
+;; ld (enemySpritePointer_WHATEVER_INSTANCE), hl 
+;; ld a, (TEMP_enemySpriteFrame)
+;; ld (enemySpriteFrame), a
+;; this will save the updated sprite 
+
+drawEnemySprite 
+    push hl
+    ld a, (TEMP_enemySpriteFrame)
     inc a
     cp 4
     jp z, resetEnemySpriteZ 
     
-    ld (enemySpriteFrame), a
-    ld hl, (enemySpritePointerZero)
+    ld (TEMP_enemySpriteFrame), a
+    ld hl, (TEMP_enemySpritePointer)
     ld de,16     ; 4 by 4 blocks
     add hl, de
-    ld (enemySpritePointerZero), hl    
+    ld (TEMP_enemySpritePointer), hl    
     
     jp skipResetEnemySpriteZ     
 resetEnemySpriteZ    
     xor a
-    ld (enemySpriteFrame), a
-    ld hl, enemySpriteZero
-    ld (enemySpritePointerZero), hl
+    ld (TEMP_enemySpriteFrame), a
+    pop hl   ;; hl contains the enemySprite address at start
+    ;;ld hl, enemySpriteZero
+    ld (TEMP_enemySpritePointer), hl
+    jr drawEnemyAfterPopHL
+    
 skipResetEnemySpriteZ         
-    ld de, (enemySpriteZeroPos_CUR)
-    ld hl, (enemySpritePointerZero)
+    pop hl  ; have to pop here if didn't jump to resetEnemySpriteZ to maintain stack
+drawEnemyAfterPopHL
+    ld de, (TEMP_enemySpritePos_CUR)
+    ld hl, (TEMP_enemySpritePointer)
     ld b, 4
     ld c, 4
     call drawSprite         
-
-    ld a, (enemySpriteOneFrame)
-    inc a
-    cp 3
-    jp z, resetEnemySpriteOne 
     
-    ld (enemySpriteOneFrame), a
-    ld hl, (enemySpritePointerOne)
-    ld de,16     ; 4 by 4 blocks
-    add hl, de
-    ld (enemySpritePointerOne), hl    
-    
-    jp skipResetEnemySpriteOne     
-resetEnemySpriteOne    
-    xor a
-    ld (enemySpriteOneFrame), a
-    ld hl, enemySpriteOne
-    ld (enemySpritePointerOne), hl
-skipResetEnemySpriteOne         
-    ld de, (enemySpriteOnePos_CUR)
-    ld hl, (enemySpritePointerOne)
-    ld b, 4
-    ld c, 4
-    call drawSprite     
     ret    
     
     
@@ -1230,6 +1264,26 @@ skipCalcualteRoomCOnfig_E
     ld (enemySpriteOnePos_DIR), hl      
 
     ret
+
+printTime    
+    ld bc, 55 
+    ld de, TimeText
+    call printstring
+    
+    ld a, (gameTime_Seconds)
+    ld de, 62    
+    call print_number8bits    
+    
+    ld de, 61
+    ld hl, (DF_CC)    
+    add hl, de  
+    ld a, _CL
+    ld (hl), a
+    
+    ld a, (gameTime_Minutes)
+    ld de, 59    
+    call print_number8bits       
+    ret
     
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
 printstring
@@ -1306,6 +1360,36 @@ sync
 	ld a,(FRAMES)
 	cp c
 	jr z,sync
+    
+    ld a, (gameTimeCounterJIFFIES)
+    inc a
+    cp 60    
+    jr z, skipJIFFIESUpdate
+    
+    ld (gameTimeCounterJIFFIES), a
+    
+    jr endOfVsync
+    
+skipJIFFIESUpdate
+    xor a
+    ld (gameTimeCounterJIFFIES), a  ; reset JIFFIES
+    ld a, (gameTime_Seconds)   ;; increment seconds
+    inc a
+    daa
+    cp $60
+    jr z, updateMinutes
+    
+    ld (gameTime_Seconds), a
+    jr endOfVsync
+updateMinutes    
+    xor a
+    ld (gameTime_Seconds), a
+    ld a, (gameTime_Minutes)    
+    inc a
+    daa
+    ld (gameTime_Minutes), a
+    
+endOfVsync        
 	ret
 
     
@@ -1437,7 +1521,17 @@ enemySpriteZeroPos_CUR
     DEFW 0
 enemySpriteOnePos_CUR
     DEFW 0
-        
+TEMP_enemySpritePointer
+    DEFW 0
+TEMP_enemySpritePos_CUR
+    DEFW 0
+TEMP_enemySpriteFrame
+    DEFB 0
+enemySpriteFrameZero
+    DEFB 0
+enemySpriteFrameOne    
+    DEFB 0
+    
 enemySprites   ;; keeping these to 4*4 for speed and size
 enemySprite4by4BlankPointer
     DEFW 0
@@ -1463,8 +1557,15 @@ enemySpriteOne
 	DEFB $00, $85, $05, $00, $83, $06, $86, $83, $03, $86, $06, $03,
 	DEFB $00, $85, $05, $00
 
-
+gameTime_Seconds
+    DEFB 0 
+gameTime_Minutes
+    DEFB 0
+gameTimeCounterJIFFIES  ; a nod to C64 1/60th of a second count reset at 60.
+    DEFB 0
     
+TimeText
+    DEFB _T,_I,_M,_E,_EQ,$ff
 TopLineText
     DEFB _J,_U,_M,_P, 136, _R, _O, _0, _M, 0, 28, 28, 0,136,136, _G, _O, _L, _D, 28, 28, 0,136, 136, 136,_B,_Y,_T,_E,32,$ff
 moveRoomDebugTest
