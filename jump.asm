@@ -69,6 +69,9 @@ CLS				EQU $0A2A
 #define INITIAL_PLAYER_Y  3
 #define INITIAL_PLAYER_OFFSET 468
 
+#define SIZE_OF_ROOM_CONFIG 52
+#define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config
+
 VSYNCLOOP       EQU      3
 
 ; character set definition/helpers
@@ -644,7 +647,7 @@ drawRoom
     ld a, (currentRoom)    
     cp 0
     jp z, skipCalcualteRoomCOnfig   
-    ld de, 52 ;; should use this but doesn't work: (Room_2_Config - Room_1_Config) 
+    ld de, SIZE_OF_ROOM_CONFIG ;; should use this but doesn't work: (Room_2_Config - Room_1_Config) 
     ld b,a       
 drawRoomCalcOffsetToRoom    
     ;;; ad 32 to offset to get next room
@@ -1140,7 +1143,7 @@ initialiseEnemysForRoom
     ld a, (currentRoom)    
     cp 0
     jp z, skipCalcualteRoomCOnfig_E   
-    ld de, 52 ;; should use this but doesn't work: (Room_2_Config - Room_1_Config) 
+    ld de, SIZE_OF_ROOM_CONFIG ;; should use this but doesn't work: (Room_2_Config - Room_1_Config) 
     ld b,a       
 drawRoomCalcOffsetToRoom_E    
     ;;; ad 32 to offset to get next room
@@ -1586,6 +1589,8 @@ firstEnemyAddress      ;;  36 bytes
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
     
+    
+    
 Room_2_Config    
     DEFB 1    ; room ID
     ;;; DOORS  * 3 max enabled  
@@ -1628,6 +1633,9 @@ Room_2_Config
     DEFW 640  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
+    
+    
+    
 
 
 ;;; rooms need defining this is just a copy of room 0
