@@ -69,8 +69,8 @@ CLS				EQU $0A2A
 #define INITIAL_PLAYER_Y  3
 #define INITIAL_PLAYER_OFFSET 468
 
-#define SIZE_OF_ROOM_CONFIG 52
-#define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config
+;63
+#define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config    
 
 VSYNCLOOP       EQU      2
 
@@ -220,6 +220,8 @@ initVariables
     ld (playerSpritePointer), hl 
     ld a, 2
     ld (compareValueGround), a
+    ld a, 5
+    ld (playerLives), a
     
     xor a
     ld (gameTime_Seconds), a
@@ -249,6 +251,7 @@ waitForTVSync
 	djnz waitForTVSync
     
     call printTime
+    call printLives
     
     ld hl, (currentPlayerLocation) ;; hl is the location to start checking
     ld de, -33
@@ -680,7 +683,7 @@ skipCalcualteRoomCOnfig
     ld de, 11
     call print_number8bits
     
-    
+      
     ld de, 33    
     ld hl, Display+1    
     add hl, de        
@@ -708,7 +711,7 @@ drawColZero
     inc hl    
     inc hl
     djnz drawColZero    
-    
+       
 drawRoomDoors   ; basically overwrite the boarder with character 0
     ;; this is long winded approach becasue on zx81 can't use the iy or ix registers todo offsets
     ld de, (RoomConfigAddress)
@@ -862,6 +865,14 @@ skipDrawAlreadySprite3
     inc hl
 
     djnz drawPlatform3
+   
+
+    ld de, (RoomConfigAddress)
+    ld hl, 52
+    add hl, de
+    ld bc, 35
+    ex de, hl    
+    call printstring    
     
     ret
 
@@ -1283,8 +1294,35 @@ printTime
     ld a, (gameTime_Minutes)
     ld de, 59    
     call print_number8bits       
+    
+    ;; if minutes = 10 and seconds = 00 then decrease lives by 1 
+    ld a, (gameTime_Minutes)
+    cp $10      ; remember these time variables ar daa'd so are Binary Coded Decimal 
+    jp z, checkMintesAreZero
+    jp endOfPrintTimeRoutine    
+checkMintesAreZero
+    ld a, (gameTime_Seconds)
+    cp 0
+    jr z, decreaseLivesByOne
+    jr endOfPrintTimeRoutine  
+decreaseLivesByOne
+    ld a, (playerLives)
+    dec a
+    ld (playerLives), a
+    ;;; todo - add code to cause print message or do a player kill and restart
+endOfPrintTimeRoutine
     ret
     
+printLives
+    ld bc, 46
+    ld de, LivesText
+    call printstring
+    
+    ld a, (playerLives)
+    ld de, 51    
+    call print_number8bits        
+    ret
+      
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
 printstring
     push de ; preserve de
@@ -1363,7 +1401,7 @@ sync
     
     ld a, (gameTimeCounterJIFFIES)
     inc a
-    cp 60    
+    cp 50    
     jr z, skipJIFFIESUpdate
     
     ld (gameTimeCounterJIFFIES), a
@@ -1566,6 +1604,8 @@ gameTimeCounterJIFFIES  ; a nod to C64 1/60th of a second count reset at 60.
     
 TimeText
     DEFB _T,_I,_M,_E,_EQ,$ff
+LivesText
+    DEFB _L,_I,_V,_E,_S,_EQ,$ff    
 TopLineText
     DEFB _J,_U,_M,_P, 136, _R, _O, _0, _M, 0, 28, 28, 0,136,136, _G, _O, _L, _D, 28, 28, 0,136, 136, 136,_B,_Y,_T,_E,32,$ff
 moveRoomDebugTest
@@ -1599,6 +1639,8 @@ groundPlatFlag
 justJumpFlag
     DEFB 0
 goldFoundCount
+    DEFB 0
+playerLives
     DEFB 0
 goldFoundInRoom
     DEFB 0
@@ -1689,7 +1731,8 @@ firstEnemyAddress      ;;  36 bytes
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
-    
+RoomZeroName    
+    DEFB _C,_E,_N,_T,0,_C,_A,_V,0,0,$ff
     
     
 Room_2_Config    
@@ -1734,7 +1777,7 @@ Room_2_Config
     DEFW 640  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
-    
+    DEFB _P,_R,_I,_N,_T,_F,_OP,_CP,0,0,$ff    
     
     
 
@@ -1781,7 +1824,7 @@ Room_2_Config
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
-
+    DEFB _R,_O,_O,_M,0,_3,_QM,0,0,0,$ff
 
 
     DEFB 3    ; room ID   
@@ -1824,7 +1867,7 @@ Room_2_Config
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
-
+    DEFB _A,_R,_G,_C,0,_A,_R,_G,_V,0,$ff
 
     DEFB 4    ; room ID   
     ;;; DOORS  * 3 max enabled  
@@ -1854,10 +1897,10 @@ Room_2_Config
     DEFW 364  ; start of platform  25,26
     DEFB 1    ; length             (byte 27)
     ;;; tokens 2 bytes each
-    DEFW 55  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
-    DEFW 55  ; treasure token offset from DF_CC
-    DEFW 55  ; treasure token offset from DF_CC
-    DEFW 55  ; treasure token offset from DF_CC
+    DEFW 366  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 367  ; treasure token offset from DF_CC
+    DEFW 369  ; treasure token offset from DF_CC
+    DEFW 370  ; treasure token offset from DF_CC
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
@@ -1866,6 +1909,49 @@ Room_2_Config
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
+    DEFB _L,_O,_S,_T,0,_G,_O,_L,_D,0,$ff
+    
+    DEFB 5    ; room ID   
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 196   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    
+    DEFB 8    ; character of platform 0 = disabled  (byte16)
+    DEFW 610  ; start of platform   17,18
+    DEFB 1    ; length   19
+    
+    DEFB 137    ; character of platform 0 = disabled  20
+    DEFW 454  ; start of platform  21,22
+    DEFB 1    ; length  23
+    
+    DEFB 128    ; character of platform 0 = disabled  24
+    DEFW 364  ; start of platform  25,26
+    DEFB 1    ; length             (byte 27)
+    ;;; tokens 2 bytes each
+    DEFW 718  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 720  ; treasure token offset from DF_CC
+    DEFW 722  ; treasure token offset from DF_CC
+    DEFW 724  ; treasure token offset from DF_CC
+    DEFW 640  ; enemySpriteZeroPos_ST 
+    DEFW 113  ; enemySpriteOnePos_ST  
+    DEFW 647  ; enemySpriteZeroPos_END
+    DEFW 122  ; enemySpriteOnePos_END 
+    DEFW 640  ; enemySpriteZeroPos_CUR
+    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 1    ; enemySpriteOnePos_DIR 
+    DEFB _S,_E,_E,_N,0,_T,_H,_I,_S,_QM,$ff
 
     
 VariablesEnd:   DEFB $80
