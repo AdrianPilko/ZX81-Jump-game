@@ -65,9 +65,11 @@ CLS				EQU $0A2A
 #define SHAPE_CHAR_WALL 189
 #define TREASURE_CHARACTER 141  ; $$$$
 
-#define INITIAL_PLAYER_X  6
+#define INITIAL_PLAYER_X  5    ;;; TODO this should ultimately come from room config
 #define INITIAL_PLAYER_Y  3
-#define INITIAL_PLAYER_OFFSET 468
+#define INITIAL_PLAYER_OFFSET 467
+#define ENEMY_CHAR_1 133
+#define ENEMY_CHAR_2 $5
 
 ;63
 #define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config    
@@ -224,6 +226,8 @@ initVariables
     ld (playerLives), a
     
     xor a
+    ld (gameOverRestartFlag), a
+    ld (hitEnemyRestartRoomFlag), a
     ld (gameTime_Seconds), a
     ld (gameTime_Minutes), a
     ld (gameTimeCounterJIFFIES), a
@@ -233,6 +237,7 @@ initVariables
     ld (enemySpritePointerZero), hl
     ld hl, enemySpriteOne
     ld (enemySpritePointerOne), hl
+    
     
     call initialiseEnemysForRoom
 
@@ -249,7 +254,7 @@ gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 waitForTVSync	
 	call vsync
 	djnz waitForTVSync
-    
+      
     call printTime
     call printLives
     
@@ -258,13 +263,22 @@ waitForTVSync
     add hl, de
     ld b, 9 ;; b is the rows to check 
     ld c, 8 ;; c is the columns to check    
-    call checkAndGoldCollect  ; we check this before the blank sprite is drawn     
+    call checkCollisionAndGoldCollect  ; we check this before the blank sprite is drawn     
     
+    ld a, (hitEnemyRestartRoomFlag)
+    cp 1    
+    call z, executeRestartCurrentRoom
+    
+    ld a, (gameOverRestartFlag)
+    cp 1
+    jp z, initVariables
+    
+   
     ; if just entered room draw room
     ld a, (roomJustEnteredFlag)
     cp 1
     jp nz, skipRoomDraw
-    call drawRoom
+    call drawRoom      
     
     ;; we're resetting player x y and currentPlayerLocation to fixed number
     ;; this needs to come from room config - player may then start in different location 
@@ -281,7 +295,7 @@ waitForTVSync
     ld (goldFoundInRoom), a
     ld (roomJustEnteredFlag),a
     
-skipRoomDraw     
+skipRoomDraw    
     call blankEnemySprites
     call drawEnemySprites        
     call updateEnemySpritePositions
@@ -633,6 +647,7 @@ noMoveRoomFlag
 executeMoveRoom
     xor a
     ld (moveRoomFlag), a  ; first thing clear this flag otherwise continually move room :)
+    ld (hitEnemyRestartRoomFlag), a
     
 #ifdef DEBUG_ROOM_MOVE    
     ld de, moveRoomDebugTest
@@ -645,6 +660,22 @@ executeMoveRoom
     inc a
     ld (currentRoom), a
     
+    call initialiseEnemysForRoom
+    
+    ret 
+
+executeRestartCurrentRoom
+    xor a
+    ld (moveRoomFlag), a  ; first thing clear this flag otherwise continually move room :)
+    ld (hitEnemyRestartRoomFlag), a
+    
+#ifdef DEBUG_ROOM_MOVE    
+    ld de, moveRoomDebugTest
+    ld bc, 76
+    call printstring
+#endif    
+    ld a, 1
+    ld (roomJustEnteredFlag), a   ; set this will trigger a full room redraw    
     call initialiseEnemysForRoom
     
     ret 
@@ -935,9 +966,10 @@ drawSprite_OR_ColLoop
 ;; hl is the location to start checking
 ;; b is the rows to check
 ;; c is the columns to check
-checkAndGoldCollect 
+checkCollisionAndGoldCollect 
     xor a
-    ld (goldFoundCount), a
+    ld (goldFoundCount), a     
+    ld (hitEnemyRestartRoomFlag), a 
 checkAndGoldCollectRowLoop
     push bc          
     ld b, c    ; get column loop counter in b 
@@ -946,7 +978,9 @@ GoldCollectColLoop
             ld a, (hl)
             inc hl            
             cp TREASURE_CHARACTER
-            jr z, foundGold_YES           
+            jr z, foundGold_YES                       
+         ;;   cp 133
+          ;;  jr z, CollisionWithEnemy
             djnz GoldCollectColLoop
         pop hl
         ld de, 33             ;; move next write position to next row
@@ -955,6 +989,26 @@ GoldCollectColLoop
     djnz checkAndGoldCollectRowLoop    
     jp justPrintScore
     
+
+CollisionWithEnemy  ; uh oh :--///
+    pop hl  ;; as we jumped out of the loop need to pop these
+    pop bc  ;; as we jumped out of the loop need to pop these
+    ld a, 1
+    ld (hitEnemyRestartRoomFlag), a 
+    
+    ld a, (playerLives)
+    dec a
+    cp 0
+    jp z, gameOverRestart   
+    
+    ld (playerLives), a
+    
+    jp justPrintScore
+    
+gameOverRestart
+    ld a, 1
+    ld (gameOverRestartFlag),a     
+    jp justPrintScore        
 foundGold_YES
     pop hl  ;; as we jumped out of the loop need to pop these
     pop bc  ;; as we jumped out of the loop need to pop these
@@ -998,6 +1052,7 @@ justPrintScore
     call printNumber    
     
     ret
+    
 updateEnemySpritePositions
     ;check the direction then decide which ST or END to compare
     ld hl, (enemySpriteZeroPos_DIR)
@@ -1322,6 +1377,9 @@ printLives
     ld de, 51    
     call print_number8bits        
     ret
+    
+
+
       
 ; this prints at to any offset (stored in bc) from the top of the screen Display, using string in de
 printstring
@@ -1633,6 +1691,10 @@ jumpDelayBackoff
 currentRoom
     DEFB 0
 roomJustEnteredFlag
+    DEFB 0
+hitEnemyRestartRoomFlag
+    DEFB 0
+gameOverRestartFlag    
     DEFB 0
 groundPlatFlag
     DEFB 0
