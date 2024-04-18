@@ -966,24 +966,30 @@ drawSprite_OR_ColLoop
 ;; hl is the location to start checking
 ;; b is the rows to check
 ;; c is the columns to check
+
+;;;; TODO check only the outer edges of player
+
 checkCollisionAndGoldCollect 
     xor a
     ld (goldFoundCount), a     
     ld (hitEnemyRestartRoomFlag), a 
 checkAndGoldCollectRowLoop
     push bc          
-    ld b, c    ; get column loop counter in b 
+    ld b, 2      ; only check left and right edges
          push hl
 GoldCollectColLoop       
             ld a, (hl)
-            inc hl            
+            ld de, 7
+            add hl, de
             cp TREASURE_CHARACTER
             jr z, foundGold_YES                       
-         ;;   cp 133
-          ;;  jr z, CollisionWithEnemy
+            cp 133
+            jr z, CollisionWithEnemy
+            cp 5
+            jr z, CollisionWithEnemy            
             djnz GoldCollectColLoop
         pop hl
-        ld de, 33             ;; move next write position to next row
+        ld de, 33             ;; move next write position to next row        
         add hl, de
     pop bc
     djnz checkAndGoldCollectRowLoop    
@@ -1788,13 +1794,13 @@ firstEnemyAddress      ;;  36 bytes
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
-    DEFW 122  ; enemySpriteOnePos_END 
+    DEFW 126  ; enemySpriteOnePos_END 
     DEFW 640  ; enemySpriteZeroPos_CUR
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
 RoomZeroName    
-    DEFB _C,_E,_N,_T,0,_C,_A,_V,0,0,$ff
+    DEFB _C,_E,_N,_T,0,_C,_A,_V,_QM,0,$ff
     
     
 Room_2_Config    
