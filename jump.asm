@@ -46,8 +46,8 @@
 CLS				EQU $0A2A
 ;;;;;#define DEBUG_NO_SCROLL
 ;;;;;#define DEBUG_PLAYER_XY
-;#define DEBUG_START_IN_ROOM_X   1  
-;#define DEBUG_ROOM_TO_START_IN 1
+#define DEBUG_START_IN_ROOM_X   1  
+#define DEBUG_ROOM_TO_START_IN 4
 
 
 #define KEYBOARD_READ_PORT_P_TO_Y	$DF
@@ -227,7 +227,7 @@ initVariables
     ld (playerSpritePointer), hl 
     ld a, 2
     ld (compareValueGround), a
-    ld a, 5
+    ld a, 9
     ld (playerLives), a
     
     xor a
@@ -966,7 +966,7 @@ noGoldFoundBypass
 checkAndGoldCollectRowLoop
     push bc          
     ld b, 2      ; only check left and right edges
-         push hl
+         push hl         
 GoldCollectColLoop       
             ld a, (hl)
             ld de, 7
@@ -1819,6 +1819,7 @@ firstEnemyAddress      ;;  36 bytes
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
+    
 RoomZeroName    
     DEFB _C,_E,_N,_T,0,_C,_A,_V,_QM,0,$ff
     
@@ -2001,16 +2002,16 @@ Room_2_Config
     ;;; platforms max = 3 enabled            
     
     DEFB 8    ; character of platform 0 = disabled  (byte16)
-    DEFW 610  ; start of platform   17,18
-    DEFB 1    ; length   19
+    DEFW 607  ; start of platform   17,18
+    DEFB 4    ; length   19
     
     DEFB 137    ; character of platform 0 = disabled  20
     DEFW 454  ; start of platform  21,22
-    DEFB 1    ; length  23
+    DEFB 3    ; length  23
     
     DEFB 128    ; character of platform 0 = disabled  24
     DEFW 364  ; start of platform  25,26
-    DEFB 1    ; length             (byte 27)
+    DEFB 3    ; length             (byte 27)
     
     DEFB 0    ; 1 = enabled 0 = disabled  
     DEFW 394  ; start of platform  25,26
@@ -2018,12 +2019,12 @@ Room_2_Config
 
     DEFB 0    ; 1 = enabled 0 = disabled  
     DEFW 64  ; start of platform  25,26
-    DEFB 2    ; length             (byte 27)       
+    DEFB 3    ; length             (byte 27)       
     ;;; tokens 2 bytes each
-    DEFW 366  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
-    DEFW 367  ; treasure token offset from DF_CC
-    DEFW 369  ; treasure token offset from DF_CC
-    DEFW 370  ; treasure token offset from DF_CC
+    DEFW 579  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 580  ; treasure token offset from DF_CC
+    DEFW 271  ; treasure token offset from DF_CC
+    DEFW 304  ; treasure token offset from DF_CC
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
