@@ -1272,6 +1272,7 @@ drawEnemySprite
 resetEnemySpriteZ    
     xor a
     ld (TEMP_enemySpriteFrame), a
+    
     pop hl   ;; hl contains the enemySprite address at start
     ;;ld hl, enemySpriteZero
     ld (TEMP_enemySpritePointer), hl
@@ -1410,6 +1411,27 @@ skipCalcualteRoomCOnfig_E
     inc hl
     ld a, (hl)
     ld (enemySpriteOnePos_RATE), a
+    inc hl
+    ;; the next two 16bit addreses are pointers to the sprite data
+
+    push hl    
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d
+    ld (enemySpritePointerZero), de
+    pop hl
+    inc hl
+    inc hl     
+
+    push hl    
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d
+    ld (enemySpritePointerOne), de
+    pop hl
+    inc hl
+    inc hl     
+    
     ret
 
 printTime    
@@ -1916,6 +1938,8 @@ firstEnemyAddress      ;;  36 bytes
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 0; slow rate = 1
     DEFB 1    ; enemy 1 full rate enemy = 0; slow  rate = 1
+    DEFW enemySpriteOne
+    DEFW enemySpriteTwo
 RoomZeroName    
     DEFB _C,_E,_N,_T,0,_C,_A,_V,_QM,0,$ff
     
@@ -1973,6 +1997,8 @@ Room_2_Config
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 0    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 1    ; enemy 1 full rate enemy = 1; half rate = 0
+    DEFW enemySpriteZero
+    DEFW enemySpriteThree    
     DEFB _P,_R,_I,_N,_T,_F,_OP,_CP,0,0,$ff    
     
     
@@ -2032,6 +2058,8 @@ Room_2_Config
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteZero
+    DEFW enemySpriteOne    
     DEFB _R,_O,_O,_M,0,_3,_QM,0,0,0,$ff
 
 
@@ -2085,6 +2113,8 @@ Room_2_Config
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteOne
+    DEFW enemySpriteOne    
     DEFB _A,_R,_G,_C,0,_A,_R,_G,_V,0,$ff
 
     DEFB 4    ; room ID   
@@ -2137,6 +2167,8 @@ Room_2_Config
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteOne
+    DEFW enemySpriteThree        
     DEFB _L,_O,_S,_T,0,_G,_O,_L,_D,0,$ff
     
     DEFB 5    ; room ID   
@@ -2189,6 +2221,8 @@ Room_2_Config
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteTwo
+    DEFW enemySpriteOne            
     DEFB _S,_E,_E,_N,0,_B,_4,_QM,_QM,0,$ff
 
 
@@ -2243,6 +2277,8 @@ Room_2_Config
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteOne
+    DEFW enemySpriteTwo            
     DEFB _S,_E,_E,_N,0,_B,_5,_QM,_QM,0,$ff
     
     
@@ -2296,6 +2332,8 @@ Room_2_Config
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteOne
+    DEFW enemySpriteThree            
     DEFB _T,_H,_E,0,_E,_N,_D,0,0,$ff
 
     
