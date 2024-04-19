@@ -46,8 +46,8 @@
 CLS				EQU $0A2A
 ;;;;;#define DEBUG_NO_SCROLL
 ;;;;;#define DEBUG_PLAYER_XY
-#define DEBUG_START_IN_ROOM_X   1  
-#define DEBUG_ROOM_TO_START_IN 1
+;#define DEBUG_START_IN_ROOM_X   1  
+;#define DEBUG_ROOM_TO_START_IN 1
 
 
 #define KEYBOARD_READ_PORT_P_TO_Y	$DF
@@ -819,7 +819,7 @@ drawPlatforms
         ld de, (RoomConfigAddress)
         ld hl, 16     ;; offset to start of platform config in room config - enabled/disabled
         add hl, de
-        ld b, 4       ;; 3 platforms (currently
+        ld b, 5       ;; 3 platforms (currently
 platformLoop    
         push bc
         push hl 
@@ -1748,6 +1748,10 @@ Room_1_Config
     DEFB 1    ; 1 = enabled 0 = disabled  
     DEFW 560  ; start of platform  25,26
     DEFB 5    ; length             (byte 27)
+
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)        
 startOfRoom1Treasure      
     ;;; tokens 2 bytes each
     DEFW 169  ; treasure token offset from DF_CC   always 4 treasure (byte 28)    
@@ -1800,6 +1804,10 @@ Room_2_Config
     DEFB 1    ; 1 = enabled 0 = disabled  
     DEFW 560  ; start of platform  25,26
     DEFB 5    ; length             (byte 27)    
+
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)        
     ;;; tokens 2 bytes each
     
     DEFW 168  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
@@ -1852,7 +1860,11 @@ Room_2_Config
     
     DEFB 0    ; 1 = enabled 0 = disabled  
     DEFW 394  ; start of platform  25,26
-    DEFB 13    ; length             (byte 27)    
+    DEFB 13    ; length             (byte 27)   
+    
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)    
     ;;; tokens 2 bytes each
   
     DEFW 332  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
@@ -1901,7 +1913,11 @@ Room_2_Config
 
     DEFB 0    ; 1 = enabled 0 = disabled  
     DEFW 394  ; start of platform  25,26
-    DEFB 13    ; length             (byte 27)        
+    DEFB 13    ; length             (byte 27)   
+    
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)        
     ;;; tokens 2 bytes each
     DEFW 513  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 514  ; treasure token offset from DF_CC
@@ -1948,6 +1964,10 @@ Room_2_Config
     DEFB 0    ; 1 = enabled 0 = disabled  
     DEFW 394  ; start of platform  25,26
     DEFB 13    ; length             (byte 27)        
+
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)        
     ;;; tokens 2 bytes each
     DEFW 366  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 367  ; treasure token offset from DF_CC
@@ -1994,6 +2014,10 @@ Room_2_Config
     DEFB 0    ; 1 = enabled 0 = disabled  
     DEFW 394  ; start of platform  25,26
     DEFB 13    ; length             (byte 27)        
+    
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)    
     ;;; tokens 2 bytes each
     DEFW 718  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 720  ; treasure token offset from DF_CC
