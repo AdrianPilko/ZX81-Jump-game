@@ -791,112 +791,8 @@ drawTreasure
         ld (hl), a
     pop hl
     djnz drawTreasure    
-
     
-drawPlatforms
-    ;; this is long winded approach becasue on zx81 can't use the iy or ix registers todo offsets
-    ld de, (RoomConfigAddress)
-    ld hl, 17
-    add hl, de
-    
-    ld e, (hl)                   ; load the low byte of the address into register e
-    inc hl                       ; increment hl to point to the high byte of the address
-    ld d, (hl)                   ; load the high byte of the address into register d
-    
-    ld hl, (DF_CC)
-    add hl, de 
-    ld (platformStartAddress), hl
-
-    ld de, (RoomConfigAddress)
-    ld hl, 19
-    add hl, de
-    ld a, (hl)
-    ld b, a
-    
-    ;ld de, (RoomConfigAddress)
-    ;ld hl, 16
-    ;;add hl, de
-    ;ld a, (hl)         
-    ld hl, (platformStartAddress)
-drawPlatform1
-    ld a, (hl)
-    cp 0
-    jr nz, skipDrawAlreadySprite1            
-    ld a, SHAPE_CHAR_WALL ; force all platforms to be same to help ease checking landed
-    ld (hl), a
-skipDrawAlreadySprite1    
-    inc hl
-    djnz drawPlatform1
-
-
-    ld de, (RoomConfigAddress)
-    ld hl, 21
-    add hl, de
-    
-    ld e, (hl)                   ; load the low byte of the address into register e
-    inc hl                       ; increment hl to point to the high byte of the address
-    ld d, (hl)                   ; load the high byte of the address into register d
-    
-    ld hl, (DF_CC)
-    add hl, de 
-    ld (platformStartAddress), hl
-
-    ld de, (RoomConfigAddress)
-    ld hl, 23
-    add hl, de
-    ld a, (hl)
-    ld b, a
-    
-    ; ld de, (RoomConfigAddress)
-    ; ld hl, 20
-    ; add hl, de
-    ; ld a, (hl)     
-    ld hl, (platformStartAddress)
-drawPlatform2
-    ld a, (hl)
-    cp 0
-    jp nz, skipDrawAlreadySprite2
-    ld a, SHAPE_CHAR_WALL ; force all platforms to be same to help ease checking landed
-    ld (hl), a
-skipDrawAlreadySprite2    
-    inc hl
-    djnz drawPlatform2
-
-
-    ld de, (RoomConfigAddress)
-    ld hl, 25
-    add hl, de
-    
-    ld e, (hl)                   ; load the low byte of the address into register e
-    inc hl                       ; increment hl to point to the high byte of the address
-    ld d, (hl)                   ; load the high byte of the address into register d
-    
-    ld hl, (DF_CC)
-    add hl, de 
-    ld (platformStartAddress), hl
-
-    ld de, (RoomConfigAddress)
-    ld hl, 27
-    add hl, de
-    ld a, (hl)
-    ld b, a
-    
-    ; ld de, (RoomConfigAddress)
-    ; ld hl, 24
-    ; add hl, de
-    ; ld a, (hl)      
-    ld hl, (platformStartAddress)
-drawPlatform3
-    ld a, (hl)
-    cp 0
-    jp nz, skipDrawAlreadySprite3
-    ld a, SHAPE_CHAR_WALL ; force all platforms to be same to help ease checking landed
-    ld (hl), a
-skipDrawAlreadySprite3
-    inc hl
-
-    djnz drawPlatform3
-   
+    call drawPlatforms   ; moved completely into own subroutine
 
     ld de, (RoomConfigAddress)
     ld hl, 52
@@ -905,6 +801,63 @@ skipDrawAlreadySprite3
     ex de, hl    
     call printstring    
     
+    ret
+    
+    
+drawPlatforms
+    push hl
+    push de
+        ;; this is long winded approach becasue on zx81 can't use the iy or ix registers todo offsets
+        ld de, (RoomConfigAddress)
+        ld hl, 16     ;; offset to start of platform config in room config - enabled/disabled
+        add hl, de
+        ld b, 3       ;; 3 platforms (currently
+platformLoop    
+        push bc
+        push hl 
+            ld a, (hl)
+            cp 0            ;; check config is the platform disabled or not
+            jp z, skipPlatform
+            inc hl    ;; this gets hl to point to the start of platform offset in room config
+            call drawPlatform        
+skipPlatform  
+        pop hl  
+        inc hl    ;; still need to increment hl to move to next platform in config
+        inc hl
+        inc hl
+        inc hl
+
+        pop bc
+        djnz platformLoop
+    pop de
+    pop hl 
+    ret
+
+drawPlatform  
+    push hl  
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d
+    
+        ld hl, (DF_CC)
+        add hl, de 
+        ld (platformStartAddress), hl
+    pop hl
+    inc hl 
+    inc hl    ; this gets hl to the memory location of the length of platform in room config
+    ld a, (hl)
+    ld b, a
+    
+    ld hl, (platformStartAddress)
+drawPlatformLoop
+    ld a, (hl)
+    cp 0
+    jr nz, skipDrawAlreadySprite1            
+    ld a, SHAPE_CHAR_WALL ; force all platforms to be same to help ease checking landed
+    ld (hl), a
+skipDrawAlreadySprite1    
+    inc hl
+    djnz drawPlatformLoop
     ret
 
 ;;;; sprite code
@@ -1773,17 +1726,18 @@ Room_1_Config
     DEFB 0    ; ID of next room from this one  (byte 15)
     ;;; platforms max = 3 enabled            
     
-    DEFB 8    ; character of platform 0 = disabled  (byte16)
+    DEFB 1    ; 1 = enabled 0 = disabled  (byte16)
     DEFW 610  ; start of platform   17,18
     DEFB 4    ; length   19
     
-    DEFB 137    ; character of platform 0 = disabled  20
+    DEFB 1    ; 1 = enabled 0 = disabled  
     DEFW 454  ; start of platform  21,22
     DEFB 6    ; length  23
     
-    DEFB 128    ; character of platform 0 = disabled  24
+    DEFB 1    ; 1 = enabled 0 = disabled  
     DEFW 364  ; start of platform  25,26
     DEFB 17    ; length             (byte 27)
+    
     ;;; tokens 2 bytes each
     DEFW 169  ; treasure token offset from DF_CC   always 4 treasure (byte 28)    
     DEFW 170  ; treasure token offset from DF_CC  307
