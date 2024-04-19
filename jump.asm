@@ -46,8 +46,9 @@
 CLS				EQU $0A2A
 ;;;;;#define DEBUG_NO_SCROLL
 ;;;;;#define DEBUG_PLAYER_XY
-#define DEBUG_START_IN_ROOM_X   1  
-#define DEBUG_ROOM_TO_START_IN 4
+;#define DEBUG_START_IN_ROOM_X   1  
+;#define DEBUG_ROOM_TO_START_IN 4
+;;#define DEBUG_MULTIRATECOUNT 1
 
 
 #define KEYBOARD_READ_PORT_P_TO_Y	$DF
@@ -78,6 +79,8 @@ CLS				EQU $0A2A
 #define OFFSET_TO_TREASURE startOfRoom1Treasure-Room_1_Config
 #define OFFSET_TO_ENEMY_SPRITES firstEnemyAddress-Room_1_Config
 #define OFFSET_TO_ROOM_NAME RoomZeroName-Room_1_Config
+
+
 
 
 VSYNCLOOP       EQU      2
@@ -202,6 +205,8 @@ initVariables
     ld (jumpDelayBackoff), a
     
     xor a
+    ld (evenOddLoopFlag), a
+    ld (evenOddLoopCount), a
     ld (moveRoomFlag), a
     ld (score_mem_tens),a
 	ld (score_mem_hund),a    
@@ -262,7 +267,24 @@ gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 waitForTVSync	
 	call vsync
 	djnz waitForTVSync
-      
+
+    xor a
+    ld (evenOddLoopFlag), a    ; used for multi rate enemies
+    
+    ld a, (evenOddLoopCount)
+    inc a
+    ld (evenOddLoopCount), a
+    cp 4    
+    jr z, resetEvenOddAndSetFlag
+    
+    jr continueWithprintTime
+resetEvenOddAndSetFlag    
+    xor a
+    ld (evenOddLoopCount), a
+    ld a, 1
+    ld (evenOddLoopFlag), a    ; used for multi rate enemies
+    
+continueWithprintTime      
     call printTime
     call printLives
     
@@ -536,6 +558,15 @@ skipMove
     ld de, 38
     call print_number8bits
 #endif
+#ifdef DEBUG_MULTIRATECOUNT
+    ld a, (evenOddLoopCount)
+    ld de, 68
+    call print_number8bits
+    
+    ld a, (evenOddLoopFlag)
+    ld de, 72
+    call print_number8bits    
+#endif    
    
     jp gameLoop
     
@@ -1071,6 +1102,16 @@ justPrintScore
     
 updateEnemySpritePositions
     ;check the direction then decide which ST or END to compare
+   
+    ld a, (enemySpriteZeroPos_RATE)
+    cp 1
+    jp z, checkEvenOddZeroSprite  ; check evenOdd 
+    jr afterCheckEvenOddZero
+checkEvenOddZeroSprite
+    ld a, (evenOddLoopFlag)    ; used for multi rate enemies
+    cp 0
+    jp z, noUpdateSpriteZero
+afterCheckEvenOddZero    
     ld hl, (enemySpriteZeroPos_DIR)
     ld a, l
     cp 1
@@ -1111,8 +1152,20 @@ actuallyUpdateEnemy_Z
     add hl, de
     ld (enemySpriteZeroPos_CUR), hl
 
-
+noUpdateSpriteZero
 ;;; sprite 2
+
+    ld a, (enemySpriteOnePos_RATE)
+    cp 1
+    jp z, checkEvenOddOneSprite  ; check evenOdd 
+    jr afterCheckEvenOddOne
+checkEvenOddOneSprite
+    ld a, (evenOddLoopFlag)    ; used for multi rate enemies
+    cp 0
+    jp z, noUpdateSpriteOne
+afterCheckEvenOddOne    
+
+
     ;check the direction then decide which ST or END to compare
     ld hl, (enemySpriteOnePos_DIR)
     ld a, l
@@ -1154,7 +1207,7 @@ actuallyUpdateEnemy_One
     add hl, de
     ld (enemySpriteOnePos_CUR), hl
     
-
+noUpdateSpriteOne
     
     ret
 
@@ -1338,12 +1391,25 @@ skipCalcualteRoomCOnfig_E
     ld (enemySpriteOnePos_CUR), hl    
     pop hl
     inc hl
-    inc hl   
-    
-    ld hl, 1
-    ld (enemySpriteZeroPos_DIR), hl
-    ld (enemySpriteOnePos_DIR), hl      
+    inc hl       
 
+    ;; not from config yet
+    push hl 
+    ld hl, 1
+    ld (enemySpriteZeroPos_DIR), hl        
+    ld (enemySpriteOnePos_DIR), hl
+    pop hl
+    inc hl
+    inc hl       
+    inc hl
+    inc hl     
+    
+    ld a, (hl)
+    ;ld a, 1
+    ld (enemySpriteZeroPos_RATE), a
+    inc hl
+    ld a, (hl)
+    ld (enemySpriteOnePos_RATE), a
     ret
 
 printTime    
@@ -1632,6 +1698,10 @@ enemySpriteZeroPos_CUR
     DEFW 0
 enemySpriteOnePos_CUR
     DEFW 0
+enemySpriteZeroPos_RATE
+    DEFB 0
+enemySpriteOnePos_RATE
+    DEFB 0    
 TEMP_enemySpritePointer
     DEFW 0
 TEMP_enemySpritePos_CUR
@@ -1733,6 +1803,10 @@ enemySpritePointerZero
     DEFW 0 
 enemySpritePointerOne    
     DEFW 0
+evenOddLoopFlag    
+    DEFB 0
+evenOddLoopCount    
+    DEFB 0
 ;================== Room config design - may only be partially implemented
 ;; fixed length of 32 bytes per room
 
@@ -1819,7 +1893,8 @@ firstEnemyAddress      ;;  36 bytes
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
-    
+    DEFB 1    ; enemy 0 full rate enemy = 0; slow rate = 1
+    DEFB 1    ; enemy 1 full rate enemy = 0; slow  rate = 1
 RoomZeroName    
     DEFB _C,_E,_N,_T,0,_C,_A,_V,_QM,0,$ff
     
@@ -1875,6 +1950,8 @@ Room_2_Config
     DEFW 640  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
+    DEFB 0    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 1    ; enemy 1 full rate enemy = 1; half rate = 0
     DEFB _P,_R,_I,_N,_T,_F,_OP,_CP,0,0,$ff    
     
     
@@ -1932,6 +2009,8 @@ Room_2_Config
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
+    DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
     DEFB _R,_O,_O,_M,0,_3,_QM,0,0,0,$ff
 
 
@@ -1983,6 +2062,8 @@ Room_2_Config
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
+    DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
     DEFB _A,_R,_G,_C,0,_A,_R,_G,_V,0,$ff
 
     DEFB 4    ; room ID   
@@ -2033,6 +2114,8 @@ Room_2_Config
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
+    DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
     DEFB _L,_O,_S,_T,0,_G,_O,_L,_D,0,$ff
     
     DEFB 5    ; room ID   
@@ -2083,7 +2166,10 @@ Room_2_Config
     DEFW 113  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
-    DEFB _S,_E,_E,_N,0,_T,_H,_I,_S,_QM,$ff
+    DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFB _S,_E,_E,_N,0,_B,_4,_QM,_QM,0,$ff
+
 
     
 VariablesEnd:   DEFB $80
