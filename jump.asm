@@ -1918,10 +1918,10 @@ Room_2_Config
     DEFB 2    ; length             (byte 27)  
     ;;; tokens 2 bytes each
   
-    DEFW 332  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
-    DEFW 334  ; treasure token offset from DF_CC
+    DEFW 300  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 333  ; treasure token offset from DF_CC
+    DEFW 303  ; treasure token offset from DF_CC
     DEFW 336  ; treasure token offset from DF_CC
-    DEFW 338  ; treasure token offset from DF_CC
     
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
