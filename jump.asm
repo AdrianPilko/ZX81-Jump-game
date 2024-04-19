@@ -243,9 +243,9 @@ initVariables
     ld (gameTimeCounterJIFFIES), a
     ld (enemySpriteFrameZero), a
     ld (enemySpriteFrameOne), a
-    ld hl, enemySpriteZero
+    ld hl, enemySpriteTwo
     ld (enemySpritePointerZero), hl
-    ld hl, enemySpriteOne
+    ld hl, enemySpriteThree
     ld (enemySpritePointerOne), hl
     
     
@@ -1219,7 +1219,7 @@ drawEnemySprites
     ld (TEMP_enemySpritePos_CUR), hl
     ld a, (enemySpriteFrameZero)
     ld (TEMP_enemySpriteFrame), a
-    ld hl, enemySpriteZero
+    ld hl, enemySpriteTwo
     call drawEnemySprite
     ld hl, (TEMP_enemySpritePointer)
     ld (enemySpritePointerZero), hl 
@@ -1234,7 +1234,7 @@ drawEnemySprites
     ld (TEMP_enemySpritePos_CUR), hl
     ld a, (enemySpriteFrameOne)
     ld (TEMP_enemySpriteFrame), a    
-    ld hl, enemySpriteOne
+    ld hl, enemySpriteThree
     call drawEnemySprite
     ld hl, (TEMP_enemySpritePointer)
     ld (enemySpritePointerOne), hl 
@@ -1740,6 +1740,24 @@ enemySpriteOne
 	DEFB $83, $87, $04, $83, $03, $02, $01, $03, $00, $85, $05, $00,
 	DEFB $00, $85, $05, $00, $83, $06, $86, $83, $03, $86, $06, $03,
 	DEFB $00, $85, $05, $00
+    
+    
+enemySpriteTwo
+	DEFB $03, $84, $07, $03, $00, $85, $05, $00, $00, $85, $05, $00,
+	DEFB $83, $81, $82, $83, $83, $83, $83, $83, $00, $85, $05, $00,
+	DEFB $00, $85, $05, $00, $03, $03, $03, $03, $00, $00, $00, $00,
+	DEFB $03, $84, $07, $03, $83, $81, $82, $83, $00, $00, $00, $00,
+	DEFB $00, $00, $00, $00, $83, $83, $83, $83, $03, $03, $03, $03,
+	DEFB $00, $00, $00, $00    
+    
+enemySpriteThree
+	DEFB $00, $02, $04, $86, $00, $00, $02, $04, $00, $00, $00, $02,
+	DEFB $00, $00, $00, $00, $86, $02, $04, $00, $00, $86, $02, $04,
+	DEFB $00, $00, $86, $02, $00, $00, $00, $86, $86, $00, $00, $00,
+	DEFB $04, $86, $00, $00, $02, $04, $86, $00, $00, $02, $04, $86,
+	DEFB $00, $00, $00, $00, $04, $00, $00, $00, $02, $04, $00, $00,
+	DEFB $86, $02, $04, $00    
+    
 
 gameTime_Seconds
     DEFB 0 
