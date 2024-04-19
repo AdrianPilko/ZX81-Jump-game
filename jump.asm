@@ -46,6 +46,8 @@
 CLS				EQU $0A2A
 ;;;;;#define DEBUG_NO_SCROLL
 ;;;;;#define DEBUG_PLAYER_XY
+#define DEBUG_START_IN_ROOM_X   1  
+#define DEBUG_ROOM_TO_START_IN 1
 
 
 #define KEYBOARD_READ_PORT_P_TO_Y	$DF
@@ -71,8 +73,12 @@ CLS				EQU $0A2A
 #define ENEMY_CHAR_1 133
 #define ENEMY_CHAR_2 $5
 
-;63
+;70
 #define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config    
+#define OFFSET_TO_TREASURE startOfRoom1Treasure-Room_1_Config
+#define OFFSET_TO_ENEMY_SPRITES firstEnemyAddress-Room_1_Config
+#define OFFSET_TO_ROOM_NAME RoomZeroName-Room_1_Config
+
 
 VSYNCLOOP       EQU      2
 
@@ -191,8 +197,7 @@ preinit
 initVariables
 
 
-    ;;ld hl, (firstEnemyAddress - Room_1_Config)
-;; initialise variables per game
+    ;; initialise variables per game
     ld a, 10
     ld (jumpDelayBackoff), a
     
@@ -243,8 +248,11 @@ initVariables
 
     ld hl, enemySprite4by4Blank
     ld (enemySprite4by4BlankPointer), hl
-    
-    
+
+#ifdef DEBUG_START_IN_ROOM_X    
+    ld a, DEBUG_ROOM_TO_START_IN
+    ld (currentRoom), a
+#endif    
 
     
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    
@@ -771,7 +779,7 @@ doorDrawLoop
     add hl, de
     djnz doorDrawLoop
 
-    ld hl, 28        
+    ld hl, OFFSET_TO_TREASURE        
     ld b, 4
 drawTreasure    
     ld de, (RoomConfigAddress)    
@@ -795,7 +803,7 @@ drawTreasure
     call drawPlatforms   ; moved completely into own subroutine
 
     ld de, (RoomConfigAddress)
-    ld hl, 52
+    ld hl, OFFSET_TO_ROOM_NAME
     add hl, de
     ld bc, 35
     ex de, hl    
@@ -811,7 +819,7 @@ drawPlatforms
         ld de, (RoomConfigAddress)
         ld hl, 16     ;; offset to start of platform config in room config - enabled/disabled
         add hl, de
-        ld b, 3       ;; 3 platforms (currently
+        ld b, 4       ;; 3 platforms (currently
 platformLoop    
         push bc
         push hl 
@@ -1210,10 +1218,9 @@ drawRoomCalcOffsetToRoom_E
     djnz drawRoomCalcOffsetToRoom_E
 skipCalcualteRoomCOnfig_E
     ld (RoomConfigAddress), hl
-    ;ld hl, firstEnemyAddress
     
     ld de, (RoomConfigAddress)
-    ld hl, 36
+    ld hl, OFFSET_TO_ENEMY_SPRITES
     add hl, de
     
     push hl    
@@ -1737,14 +1744,18 @@ Room_1_Config
     DEFB 1    ; 1 = enabled 0 = disabled  
     DEFW 364  ; start of platform  25,26
     DEFB 17    ; length             (byte 27)
-    
+
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 560  ; start of platform  25,26
+    DEFB 5    ; length             (byte 27)
+startOfRoom1Treasure      
     ;;; tokens 2 bytes each
     DEFW 169  ; treasure token offset from DF_CC   always 4 treasure (byte 28)    
     DEFW 170  ; treasure token offset from DF_CC  307
     DEFW 422  ; treasure token offset from DF_CC    
     DEFW 722  ; treasure token offset from DF_CC
     ;; enemy definition gets loaded into these when room entered
-firstEnemyAddress      ;;  36 bytes
+firstEnemyAddress      ;;  36 bytes   
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
@@ -1785,12 +1796,17 @@ Room_2_Config
     DEFB 128    ; character of platform 0 = disabled  24
     DEFW 370  ; start of platform  25,26
     DEFB 5    ; length             (byte 27)
+    
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 560  ; start of platform  25,26
+    DEFB 5    ; length             (byte 27)    
     ;;; tokens 2 bytes each
+    
     DEFW 168  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 169  ; treasure token offset from DF_CC
     DEFW 170  ; treasure token offset from DF_CC
     DEFW 171  ; treasure token offset from DF_CC
-    
+     
     DEFW 120  ; enemySpriteZeroPos_ST 
     DEFW 640  ; enemySpriteOnePos_ST  
     DEFW 126  ; enemySpriteZeroPos_END
@@ -1833,11 +1849,17 @@ Room_2_Config
     DEFB 128    ; character of platform 0 = disabled  24
     DEFW 364  ; start of platform  25,26
     DEFB 17    ; length             (byte 27)
+    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 13    ; length             (byte 27)    
     ;;; tokens 2 bytes each
+  
     DEFW 332  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 334  ; treasure token offset from DF_CC
     DEFW 336  ; treasure token offset from DF_CC
     DEFW 338  ; treasure token offset from DF_CC
+    
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
@@ -1876,6 +1898,10 @@ Room_2_Config
     DEFB 128    ; character of platform 0 = disabled  24
     DEFW 364  ; start of platform  25,26
     DEFB 2   ; length             (byte 27)
+
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 13    ; length             (byte 27)        
     ;;; tokens 2 bytes each
     DEFW 513  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 514  ; treasure token offset from DF_CC
@@ -1918,6 +1944,10 @@ Room_2_Config
     DEFB 128    ; character of platform 0 = disabled  24
     DEFW 364  ; start of platform  25,26
     DEFB 1    ; length             (byte 27)
+    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 13    ; length             (byte 27)        
     ;;; tokens 2 bytes each
     DEFW 366  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 367  ; treasure token offset from DF_CC
@@ -1960,6 +1990,10 @@ Room_2_Config
     DEFB 128    ; character of platform 0 = disabled  24
     DEFW 364  ; start of platform  25,26
     DEFB 1    ; length             (byte 27)
+    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 13    ; length             (byte 27)        
     ;;; tokens 2 bytes each
     DEFW 718  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 720  ; treasure token offset from DF_CC
