@@ -932,8 +932,37 @@ drawSprite_OR_ColLoop
 
 checkCollisionAndGoldCollect 
     xor a
+    ld (goldFoundTemp), a
     ld (goldFoundCount), a     
     ld (hitEnemyRestartRoomFlag), a 
+    
+    push bc          
+    ld b, 4      ; check middle part of player top row
+        push hl
+        inc hl 
+        inc hl
+GoldCollectColLoop_1       
+            ld a, (hl)
+            inc hl
+            cp TREASURE_CHARACTER
+            jr z, incOnlyfoundGold_YES
+            jr noGoldFoundBypass                
+incOnlyfoundGold_YES              ;; keep a count of gold found
+            ld a, (goldFoundTemp)
+            inc a
+            ld (goldFoundTemp), a
+noGoldFoundBypass                
+            cp 133
+            jr z, CollisionWithEnemy
+            cp 5
+            jr z, CollisionWithEnemy            
+            djnz GoldCollectColLoop_1          
+            ld a, (goldFoundTemp)
+            cp 0
+            jp nz, foundGold_YES
+        pop hl
+    pop bc        
+    
 checkAndGoldCollectRowLoop
     push bc          
     ld b, 2      ; only check left and right edges
@@ -943,7 +972,13 @@ GoldCollectColLoop
             ld de, 7
             add hl, de
             cp TREASURE_CHARACTER
-            jr z, foundGold_YES                       
+            jr z, incOnlyfoundGold_YES_2
+            jr noGoldFoundBypass_2                
+incOnlyfoundGold_YES_2              ;; keep a count of gold found
+            ld a, (goldFoundTemp)
+            inc a
+            ld (goldFoundTemp), a
+noGoldFoundBypass_2  
             cp 133
             jr z, CollisionWithEnemy
             cp 5
@@ -954,7 +989,16 @@ GoldCollectColLoop
         add hl, de
     pop bc
     djnz checkAndGoldCollectRowLoop    
-    jp justPrintScore
+    ld a, (goldFoundTemp)
+    cp 0
+    jp nz, prefoundGold_YES
+    jp justPrintScore    
+prefoundGold_YES
+    push bc
+    push hl
+    jp foundGold_YES    
+
+    
     
 
 CollisionWithEnemy  ; uh oh :--///
@@ -980,6 +1024,10 @@ foundGold_YES
     pop hl  ;; as we jumped out of the loop need to pop these
     pop bc  ;; as we jumped out of the loop need to pop these
     
+    ld a, (goldFoundTemp)
+    ld b, a
+incGoldScoreLoop    
+    push bc
     ld a, 1
     ld (goldFoundCount),a    ;set this for just below where score gets inc'd
     ld c, 1    
@@ -1009,7 +1057,8 @@ addOneToHund
 	daa                                   ; z80 daa instruction realigns for BCD after add or subtract
 	ld (score_mem_hund), a
 skipAddHund	
-    
+    pop bc 
+    djnz incGoldScoreLoop
 justPrintScore
     ld bc, 23
     ld de, score_mem_tens
@@ -1667,6 +1716,8 @@ groundPlatFlag
 justJumpFlag
     DEFB 0
 goldFoundCount
+    DEFB 0
+goldFoundTemp    
     DEFB 0
 playerLives
     DEFB 0
