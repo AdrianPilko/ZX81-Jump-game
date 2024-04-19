@@ -1743,15 +1743,15 @@ Room_1_Config
     
     DEFB 1    ; 1 = enabled 0 = disabled  
     DEFW 364  ; start of platform  25,26
-    DEFB 17    ; length             (byte 27)
-
-    DEFB 1    ; 1 = enabled 0 = disabled  
-    DEFW 560  ; start of platform  25,26
     DEFB 5    ; length             (byte 27)
 
     DEFB 1    ; 1 = enabled 0 = disabled  
-    DEFW 394  ; start of platform  25,26
-    DEFB 2    ; length             (byte 27)        
+    DEFW 529  ; start of platform  25,26
+    DEFB 5    ; length             (byte 27)
+
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 661  ; start of platform  25,26
+    DEFB 5    ; length             (byte 27)        
 startOfRoom1Treasure      
     ;;; tokens 2 bytes each
     DEFW 169  ; treasure token offset from DF_CC   always 4 treasure (byte 28)    
@@ -1805,8 +1805,8 @@ Room_2_Config
     DEFW 560  ; start of platform  25,26
     DEFB 5    ; length             (byte 27)    
 
-    DEFB 1    ; 1 = enabled 0 = disabled  
-    DEFW 394  ; start of platform  25,26
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 64  ; start of platform  25,26
     DEFB 2    ; length             (byte 27)        
     ;;; tokens 2 bytes each
     
@@ -1862,9 +1862,9 @@ Room_2_Config
     DEFW 394  ; start of platform  25,26
     DEFB 13    ; length             (byte 27)   
     
-    DEFB 1    ; 1 = enabled 0 = disabled  
-    DEFW 394  ; start of platform  25,26
-    DEFB 2    ; length             (byte 27)    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 64  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)  
     ;;; tokens 2 bytes each
   
     DEFW 332  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
@@ -1915,9 +1915,9 @@ Room_2_Config
     DEFW 394  ; start of platform  25,26
     DEFB 13    ; length             (byte 27)   
     
-    DEFB 1    ; 1 = enabled 0 = disabled  
-    DEFW 394  ; start of platform  25,26
-    DEFB 2    ; length             (byte 27)        
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 64  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)       
     ;;; tokens 2 bytes each
     DEFW 513  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 514  ; treasure token offset from DF_CC
@@ -1965,9 +1965,9 @@ Room_2_Config
     DEFW 394  ; start of platform  25,26
     DEFB 13    ; length             (byte 27)        
 
-    DEFB 1    ; 1 = enabled 0 = disabled  
-    DEFW 394  ; start of platform  25,26
-    DEFB 2    ; length             (byte 27)        
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 64  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)       
     ;;; tokens 2 bytes each
     DEFW 366  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 367  ; treasure token offset from DF_CC
@@ -2015,8 +2015,8 @@ Room_2_Config
     DEFW 394  ; start of platform  25,26
     DEFB 13    ; length             (byte 27)        
     
-    DEFB 1    ; 1 = enabled 0 = disabled  
-    DEFW 394  ; start of platform  25,26
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 64  ; start of platform  25,26
     DEFB 2    ; length             (byte 27)    
     ;;; tokens 2 bytes each
     DEFW 718  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
