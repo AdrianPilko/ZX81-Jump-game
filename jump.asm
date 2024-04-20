@@ -28,15 +28,15 @@
 ;;    2) if the gold is landed on from top the score doesn't increase and stuck in room
 
 ;;; todo list 
-;;    1) add enemy sprites to room config
-;;    2) add moveable enemy spites
-;;    3) rewrite enemy sprite draw to make it a smaller proper subroutines
-;;    4) design more rooms
+;;    1) add enemy sprites to room config DONE
+;;    2) add moveable enemy sprites  DONE
+;;    3) rewrite enemy sprite draw to make it a smaller proper subroutines DONE
+;;    4) design more rooms ONGOING
 ;;    5) add verical bariiers to rooms
-;;    6) add player lives, and killed if hits enemy
-;;    7) add disapearing platforms and to room config
-;;    8) add more platforms
-;;    9) optimise the player check collision with gold to use only outer blocks
+;;    6) add player lives, and killed if hits enemy DONE
+;;    7) add disapearing platforms and to room config 
+;;    8) add more platforms  ONGOING (now can have 5)
+;;    9) optimise the player check collision with gold to use only outer blocks DONE
 
 ;some #defines for compatibility with other assemblers
 #define         DEFB .byte 
@@ -49,8 +49,8 @@ CLS				EQU $0A2A
 ;;#define DEBUG_SPRITE_ADDRESS 1
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
-;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 3
+#define DEBUG_START_IN_ROOM_X   1
+#define DEBUG_ROOM_TO_START_IN 7
 
 
 #define KEYBOARD_READ_PORT_P_TO_Y	$DF
@@ -1931,8 +1931,13 @@ enemySpriteThree
 	DEFB $00, $00, $00, $00, $00, $06, $86, $00, $00, $05, $85, $00,
 	DEFB $00, $00, $00, $00, $00, $00, $00, $00, $00, $87, $04, $00,
 	DEFB $00, $02, $01, $00
-
-
+enemySpriteFour
+	DEFB $05, $00, $00, $85, $82, $83, $83, $81, $07, $03, $03, $84,
+	DEFB $05, $00, $00, $85, $87, $00, $00, $04, $85, $83, $83, $05,
+	DEFB $85, $03, $03, $05, $02, $00, $00, $01, $00, $00, $00, $00,
+	DEFB $00, $82, $81, $00, $00, $07, $84, $00, $00, $00, $00, $00,
+	DEFB $00, $00, $00, $00, $00, $87, $04, $00, $00, $02, $01, $00,
+	DEFB $00, $00, $00, $00
 
     
 
@@ -1973,7 +1978,7 @@ high_Score_txt
 credits_and_version_1
 	DEFB __,_B,_Y,__,_A,__,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,__, _2,_0,_2,_4,$ff
 credits_and_version_2
-	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_0,_DT,_9,$ff    
+	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_0,$ff    
 credits_and_version_3
 	DEFB __,__,__,_Y,_O,_U,_T,_U,_B,_E,_CL, _B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff       
     
@@ -2467,9 +2472,64 @@ Room_2_Config
     DEFW enemySpriteOne
     DEFW enemySpriteTwo            
     DEFB _S,_E,_E,_N,0,_B,_5,_QM,_QM,0,$ff
-    
-    
+
+
     DEFB 7    ; room ID   
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 196   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    
+    DEFB 8    ; character of platform 0 = disabled  (byte16)
+    DEFW 610  ; start of platform   17,18
+    DEFB 1    ; length   19
+    
+    DEFB 137    ; character of platform 0 = disabled  20
+    DEFW 454  ; start of platform  21,22
+    DEFB 1    ; length  23
+    
+    DEFB 128    ; character of platform 0 = disabled  24
+    DEFW 364  ; start of platform  25,26
+    DEFB 1    ; length             (byte 27)
+    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 13    ; length             (byte 27)        
+    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 64  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)    
+    ;;; tokens 2 bytes each
+    DEFW 583  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 584  ; treasure token offset from DF_CC
+    DEFW 585  ; treasure token offset from DF_CC
+    DEFW 586  ; treasure token offset from DF_CC
+    DEFW 640  ; enemySpriteZeroPos_ST 
+    DEFW 113  ; enemySpriteOnePos_ST  
+    DEFW 647  ; enemySpriteZeroPos_END
+    DEFW 122  ; enemySpriteOnePos_END 
+    DEFW 640  ; enemySpriteZeroPos_CUR
+    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 1    ; enemySpriteOnePos_DIR 
+    DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteFour
+    DEFW enemySpriteTwo            
+    DEFB _S,_T,_R,_C,_M,_P,_OP,_CP,__,__,$ff
+        
+    
+    DEFB 8    ; room ID   
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
     DEFW 196   ; offset from DF_CC to top of door
