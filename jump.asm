@@ -1581,7 +1581,15 @@ hardLoop
         ld d, (hl)                   ; load the high byte of the address into register d
         ld (enemySpritePointerOne), de
     pop hl
-    
+    inc hl
+    inc hl     
+
+;; orientation of enemy movement 0 = horizontal 1 = vertica
+    ld a, (hl)
+    ld (enemySpriteZero_HorizVert), a
+    inc hl
+    ld a, (hl)    
+    ld (enemySpriteOne_HorizVert), a
     
     ret
 
@@ -1882,6 +1890,10 @@ TEMP_enemySpritePointer
     DEFW 0
 TEMP_enemySpritePos_CUR
     DEFW 0
+enemySpriteZero_HorizVert
+    DEFB 0
+enemySpriteOne_HorizVert    
+    DEFB 0
 TEMP_enemySpriteFrame
     DEFB 0
 enemySpriteFrameZero
@@ -2128,9 +2140,11 @@ firstEnemyAddress      ;;  36 bytes
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 0; slow rate = 1
-    DEFB 1    ; enemy 1 full rate enemy = 0; slow  rate = 1
+    DEFB 1    ; enemy 1 full rate enemy = 0; slow  rate = 1    
     DEFW enemySpriteOne
     DEFW enemySpriteTwo
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1    
 RoomZeroName    
     DEFB _C,_E,_N,_T,0,_C,_A,_V,_QM,0,$ff
     
@@ -2190,6 +2204,8 @@ Room_2_Config
     DEFB 1    ; enemy 1 full rate enemy = 1; half rate = 0
     DEFW enemySpriteZero
     DEFW enemySpriteThree    
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1        
     DEFB _P,_R,_I,_N,_T,_F,_OP,_CP,0,0,$ff    
     
     
@@ -2251,6 +2267,8 @@ Room_2_Config
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
     DEFW enemySpriteZero
     DEFW enemySpriteOne    
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1        
     DEFB _R,_O,_O,_M,0,_3,_QM,0,0,0,$ff
 
 
@@ -2307,6 +2325,8 @@ Room_2_Config
     DEFB 1    ; enemy 1, full rate enemy = 1; half rate = 0  
     DEFW enemySpriteOne
     DEFW enemySpriteThree    
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1        
     DEFB _A,_R,_G,_C,0,_A,_R,_G,_V,0,$ff
 
     DEFB 4    ; room ID   
@@ -2360,7 +2380,9 @@ Room_2_Config
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
     DEFW enemySpriteOne
-    DEFW enemySpriteThree        
+    DEFW enemySpriteThree      
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1    
     DEFB _L,_O,_S,_T,0,_G,_O,_L,_D,0,$ff
     
     DEFB 5    ; room ID   
@@ -2414,7 +2436,9 @@ Room_2_Config
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
     DEFW enemySpriteTwo
-    DEFW enemySpriteOne            
+    DEFW enemySpriteOne  
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1    
     DEFB _S,_E,_E,_N,0,_B,_4,_QM,_QM,0,$ff
 
 
@@ -2470,7 +2494,9 @@ Room_2_Config
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
     DEFW enemySpriteOne
-    DEFW enemySpriteTwo            
+    DEFW enemySpriteTwo    
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1        
     DEFB _S,_E,_E,_N,0,_B,_5,_QM,_QM,0,$ff
 
 
@@ -2523,9 +2549,11 @@ Room_2_Config
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
-    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0      
     DEFW enemySpriteFour
-    DEFW enemySpriteTwo            
+    DEFW enemySpriteTwo       
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  1  ; enemy one orientation horizontal = 0 vertical = 1        
     DEFB _S,_T,_R,_C,_M,_P,_OP,_CP,__,__,$ff
         
     
@@ -2580,7 +2608,9 @@ Room_2_Config
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
     DEFW enemySpriteOne
-    DEFW enemySpriteThree            
+    DEFW enemySpriteThree    
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1        
     DEFB _T,_H,_E,0,_E,_N,_D,0,0,$ff
 
     
