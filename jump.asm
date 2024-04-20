@@ -985,6 +985,8 @@ incOnlyfoundGold_YES              ;; keep a count of gold found
 noGoldFoundBypass                
             cp 133
             jr z, CollisionWithEnemy
+            cp 134
+            jr z, CollisionWithEnemy            
             cp 5
             jr z, CollisionWithEnemy            
             djnz GoldCollectColLoop_1          
@@ -1012,6 +1014,8 @@ incOnlyfoundGold_YES_2              ;; keep a count of gold found
 noGoldFoundBypass_2  
             cp 133
             jr z, CollisionWithEnemy
+            cp 134
+            jr z, CollisionWithEnemy            
             cp 5
             jr z, CollisionWithEnemy            
             djnz GoldCollectColLoop
