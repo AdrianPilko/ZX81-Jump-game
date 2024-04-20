@@ -48,9 +48,9 @@ CLS				EQU $0A2A
 ;;;;;#define DEBUG_PLAYER_XY
 ;;#define DEBUG_SPRITE_ADDRESS 1
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
+;#define DEBUG_MULTIRATECOUNT 1
 ;#define DEBUG_START_IN_ROOM_X   1
 ;#define DEBUG_ROOM_TO_START_IN 3
-;#define DEBUG_MULTIRATECOUNT 1
 
 
 #define KEYBOARD_READ_PORT_P_TO_Y	$DF
@@ -194,6 +194,74 @@ Line1:          DEFB $00,$0a                    ; Line 10
                 DEFW Line1End-Line1Text         ; Line 10 length
 Line1Text:      DEFB $ea                        ; REM
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	jp intro_title		; main entry poitn to the code ships the memory definitions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+introWaitLoop
+	ld bc,$00ff ;max waiting time
+introWaitLoop_1
+	dec bc
+	ld a,b
+	or c
+
+	jr nz, introWaitLoop_1
+	jp read_start_key
+	
+intro_title
+	call CLS  ; clears screen and sets the boarder
+    
+    ld a, (score_mem_tens)
+    ld (last_score_mem_tens),a
+    ld a, (score_mem_hund)
+    ld (last_score_mem_hund),a        
+
+    
+	ld bc,111
+	ld de,title_screen_txt
+	call printstring
+	ld bc,202    
+	ld de,keys_screen_txt_1
+	call printstring		
+    
+    ld bc,235    
+	ld de,keys_screen_txt_2
+	call printstring		
+    
+
+	   
+	ld bc,336
+	ld de,game_objective_txt
+	call printstring	
+	ld bc,436
+	ld de,last_Score_txt
+	call printstring	
+	
+    ld bc, 476
+    ld de, last_score_mem_hund ; load address of hundreds
+	call printNumber    
+	ld bc, 478			; bc is offset from start of display
+	ld de, last_score_mem_tens ; load address of  tens		
+	call printNumber	
+	ld bc,537	
+	ld de,credits_and_version_1
+	call printstring		
+	ld bc,569	
+	ld de,credits_and_version_2
+	call printstring	
+	ld bc,634	
+	ld de,credits_and_version_3
+	call printstring	    
+    
+    
+	
+read_start_key
+	ld a, KEYBOARD_READ_PORT_A_TO_G	
+	in a, (KEYBOARD_READ_PORT)					; read from io port	
+	bit 1, a									; check S key pressed
+	jp nz, introWaitLoop
+    ;; else drop into initVariables
     
 
 preinit
@@ -232,7 +300,7 @@ initVariables
     ld (playerSpritePointer), hl 
     ld a, 2
     ld (compareValueGround), a
-    ld a, 9
+    ld a, 3
     ld (playerLives), a
     
     xor a
@@ -296,7 +364,7 @@ continueWithprintTime
     
     ld a, (gameOverRestartFlag)
     cp 1
-    jp z, initVariables
+    jp z, intro_title
     
    
     ; if just entered room draw room
@@ -473,11 +541,11 @@ spriteNextRight
     jp updateRestOfScreen 
     
 doJump      ; triggered when jump key pressed just sets the YSpeed      
-    ld a, (groundPlatFlag)
+    ld a, (groundPlatFlag)   ;; this is so you can only jump off a platform
     cp 1
     jp z, setYSpeed
     jp updateRestOfScreen
-setYSpeed    ;;; we've allowed the jusp to happen - can't keep jumping in mid air!
+setYSpeed    ;;; we've allowed the jump to happen - can't keep jumping in mid air
     ld a, 6
     ld (YSpeed), a   
     ld a, 1
@@ -722,6 +790,11 @@ executeRestartCurrentRoom
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 drawRoom
+#ifdef DEBUG_START_IN_ROOM_X    
+    ld a, DEBUG_ROOM_TO_START_IN
+    ld (currentRoom), a
+#endif    
+
     call CLS
     ld hl, RoomConfig
     ld a, (currentRoom)    
@@ -1316,13 +1389,16 @@ blankEnemySprites
     ret 
     
     
-initialiseEnemysForRoom   
+initialiseEnemysForRoom
+   
     xor a    ; fastest and smallest way to clear a register
     ld (enemySpriteFrameZero),a 
     ld (enemySpriteFrameOne),a
-    
-    ;ld a, 3
-    ;ld (currentRoom), a
+
+#ifdef DEBUG_START_IN_ROOM_X    
+    ld a, DEBUG_ROOM_TO_START_IN
+    ld (currentRoom), a
+#endif    
     
     
     ld hl, RoomConfig
@@ -1811,12 +1887,12 @@ enemySpriteTwo
 	DEFB $00, $00, $00, $00    
     
 enemySpriteThree
-	DEFB $00, $02, $04, $86, $00, $00, $02, $04, $00, $00, $00, $02,
-	DEFB $00, $00, $00, $00, $86, $02, $04, $00, $00, $86, $02, $04,
-	DEFB $00, $00, $86, $02, $00, $00, $00, $86, $86, $00, $00, $00,
-	DEFB $04, $86, $00, $00, $02, $04, $86, $00, $00, $02, $04, $86,
-	DEFB $00, $00, $00, $00, $04, $00, $00, $00, $02, $04, $00, $00,
-	DEFB $86, $02, $04, $00    
+	DEFB $00, $00, $00, $00, $00, $00, $00, $00, $06, $03, $03, $86,
+	DEFB $82, $00, $00, $81, $00, $00, $00, $00, $00, $00, $00, $00,
+	DEFB $87, $03, $03, $04, $85, $04, $87, $05, $00, $00, $00, $00,
+	DEFB $00, $00, $00, $00, $00, $06, $86, $00, $00, $05, $85, $00,
+	DEFB $00, $00, $00, $00, $00, $00, $00, $00, $00, $87, $04, $00,
+	DEFB $00, $02, $01, $00
 
 
 
@@ -1834,11 +1910,35 @@ TimeText
 LivesText
     DEFB _L,_I,_V,_E,_S,_EQ,$ff    
 TopLineText
-    DEFB _J,_U,_M,_P, 136, _R, _O, _0, _M, 0, 28, 28, 0,136,136, _G, _O, _L, _D, 28, 28, 0,136, 136, 136,_B,_Y,_T,_E,32,$ff
+    DEFB _J,_U,_M,_P, 136, _R, _O, _0, _M, 0, 28, 28, 0,136,136, _G, _O, _L, _D, 28, 28, 0,136, 136, 136,_B,_Y,_T,_E,32,$ff    
 moveRoomDebugTest
     DEFB _M,_O,_V,_E,_R,_O,_O,_M,$ff
 moveRoomDebugFlagText
     DEFB _F,_L,_A,_G, $ff    
+
+
+
+title_screen_txt
+	DEFB	_Z,_X,_8,_1,__,_J,_U,_M,_P,$ff
+keys_screen_txt_1
+	DEFB	_S,__,_T,_O,__,_S,_T,_A,_R,_T,26,__,_O,__,_L,_E,_F,_T,26,__,_P,__,_R,_I,_G,_H,_T,$ff
+keys_screen_txt_2
+	DEFB	__,__,__,__,__,__,__,__,__,__,__,__,_S,_P,_A,_C,_E,__,_EQ,__,_J,_U,_M,_P,,$ff    
+
+game_objective_txt
+	DEFB	_T,_O,__,_W,_I,_N,__,_C,_O,_L,_L,_E,_C,_T,__, _A,_L,_L,__,_G,_O,_L,_D,$ff
+	
+last_Score_txt
+	DEFB 21,21,21,21,_L,_A,_S,_T,__,__,_S,_C,_O,_R,_E,21,21,21,21,$ff	
+high_Score_txt
+	DEFB 21,21,21,21,_H,_I,_G,_H,__,__,_S,_C,_O,_R,_E,21,21,21,21,$ff		
+credits_and_version_1
+	DEFB _B,_Y,__,_A,__,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,$ff
+credits_and_version_2
+	DEFB __,__,__,__,__,__,_2,_0,_2,_4,__,__,__,$ff    
+credits_and_version_3
+	DEFB _Y,_O,_U,_T,_U,_B,_E,_CL, _B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff       
+    
 compareValueGround
     DEFB 0
 comparePlatformOrGround
@@ -1855,6 +1955,10 @@ score_mem_tens
     DEFB 0
 score_mem_hund
     DEFB 0
+last_score_mem_tens
+    DEFB 0
+last_score_mem_hund
+    DEFB 0    
 DEBUG_DUMMY_VAR_1  
     DEFW 0,0,0,0,0
 currentRoom
@@ -1983,7 +2087,7 @@ firstEnemyAddress      ;;  36 bytes
     DEFB 1    ; enemy 0 full rate enemy = 0; slow rate = 1
     DEFB 1    ; enemy 1 full rate enemy = 0; slow  rate = 1
     DEFW enemySpriteOne
-    DEFW enemySpriteOne
+    DEFW enemySpriteTwo
 RoomZeroName    
     DEFB _C,_E,_N,_T,0,_C,_A,_V,_QM,0,$ff
     
@@ -2032,7 +2136,7 @@ Room_2_Config
     DEFW 171  ; treasure token offset from DF_CC
      
     DEFW 120  ; enemySpriteZeroPos_ST 
-    DEFW 640  ; enemySpriteOnePos_ST  
+    DEFW 635  ; enemySpriteOnePos_ST  
     DEFW 126  ; enemySpriteZeroPos_END
     DEFW 643  ; enemySpriteOnePos_END 
     DEFW 120  ; enemySpriteZeroPos_CUR
@@ -2122,41 +2226,42 @@ Room_2_Config
     DEFB 0    ; 9 blocks high
     DEFB 0    ; ID of next room from this one  (byte 15)
     ;;; platforms max = 3 enabled            
-    
-    DEFB 8    ; character of platform 0 = disabled  (byte16)
-    DEFW 610  ; start of platform   17,18
-    DEFB 2    ; length   19
-    
-    DEFB 137    ; character of platform 0 = disabled  20
-    DEFW 454  ; start of platform  21,22
-    DEFB 2    ; length  23
-    
-    DEFB 128    ; character of platform 0 = disabled  24
-    DEFW 364  ; start of platform  25,26
-    DEFB 2   ; length             (byte 27)
 
-    DEFB 0    ; 1 = enabled 0 = disabled  
-    DEFW 394  ; start of platform  25,26
-    DEFB 13    ; length             (byte 27)   
+    DEFB 1    ; 1 = enabled 0 = disabled  (byte16)
+    DEFW 610  ; start of platform   17,18
+    DEFB 4    ; length   19
     
-    DEFB 0    ; 1 = enabled 0 = disabled  
-    DEFW 64  ; start of platform  25,26
-    DEFB 2    ; length             (byte 27)       
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 454  ; start of platform  21,22
+    DEFB 6    ; length  23
+    
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 532  ; start of platform  25,26
+    DEFB 3    ; length             (byte 27)
+
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 370  ; start of platform  25,26
+    DEFB 8    ; length             (byte 27)
+
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 661  ; start of platform  25,26
+    DEFB 5    ; length             (byte 27)            
+   
     ;;; tokens 2 bytes each
-    DEFW 513  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 239  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFW 514  ; treasure token offset from DF_CC
     DEFW 515  ; treasure token offset from DF_CC
     DEFW 516  ; treasure token offset from DF_CC
-    DEFW 631  ; enemySpriteZeroPos_ST 
-    DEFW 368   ; enemySpriteOnePos_ST  
-    DEFW 652  ; enemySpriteZeroPos_END
-    DEFW 387  ; enemySpriteOnePos_END 
-    DEFW 640  ; enemySpriteZeroPos_CUR
-    DEFW 380  ; enemySpriteOnePos_CUR 
+    DEFW 103  ; enemySpriteZeroPos_ST 
+    DEFW 342   ; enemySpriteOnePos_ST  
+    DEFW 124  ; enemySpriteZeroPos_END
+    DEFW 355  ; enemySpriteOnePos_END 
+    DEFW 120  ; enemySpriteZeroPos_CUR
+    DEFW 350  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
-    DEFB 0    ; enemy 0 full rate enemy = 1; half rate = 0
-    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFB 1    ; enemy 0, full rate enemy = 1; half rate = 0
+    DEFB 1    ; enemy 1, full rate enemy = 1; half rate = 0  
     DEFW enemySpriteOne
     DEFW enemySpriteThree    
     DEFB _A,_R,_G,_C,0,_A,_R,_G,_V,0,$ff
