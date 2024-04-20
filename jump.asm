@@ -200,14 +200,38 @@ Line1Text:      DEFB $ea                        ; REM
 	jp intro_title		; main entry poitn to the code ships the memory definitions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 introWaitLoop
-	ld bc,$00ff ;max waiting time
+	ld b,128
 introWaitLoop_1
-	dec bc
-	ld a,b
-	or c
+    push bc	
+    ld de, 496    
+    ld hl, Display+1 
+    add hl, de        
+    ex de, hl
+    ld hl, playerSpriteLeftMove
+    ld c, 8
+    ld b, 8    
+    call drawSprite   
+    pop bc
+	djnz introWaitLoop_1
+    jp read_start_key_1     ;; have to have 2 labels as not a call return
+   
+secondIntroWaitLoop    
+   
+    ld b, 128
+introWaitLoop_2
+    push bc
+    ld de, 496    
+    ld hl, Display+1 
+    add hl, de        
+    ex de, hl
+    ld hl, playerSpriteRightMove
+    ld c, 8
+    ld b, 8    
+    call drawSprite   
+    pop bc
+    djnz introWaitLoop_2
 
-	jr nz, introWaitLoop_1
-	jp read_start_key
+	jp read_start_key_2
 	
 intro_title
 	call CLS  ; clears screen and sets the boarder
@@ -252,17 +276,31 @@ intro_title
 	call printstring	
 	ld bc,634	
 	ld de,credits_and_version_3
-	call printstring	    
-    
-    
+	call printstring
+    ld de, 496    
+    ld hl, Display+1 
+    add hl, de        
+    ex de, hl
+    ld hl, playerSpriteRightMove
+    ld c, 8
+    ld b, 8    
+    call drawSprite
+   
 	
-read_start_key
+read_start_key_1
 	ld a, KEYBOARD_READ_PORT_A_TO_G	
 	in a, (KEYBOARD_READ_PORT)					; read from io port	
-	bit 1, a									; check S key pressed
-	jp nz, introWaitLoop
-    ;; else drop into initVariables
+	bit 1, a									; check S key pressed 
+	jp nz, secondIntroWaitLoop    
+    ;; else drop into preinit then initVariables
+    jp preinit
     
+read_start_key_2
+	ld a, KEYBOARD_READ_PORT_A_TO_G	
+	in a, (KEYBOARD_READ_PORT)					; read from io port	
+	bit 1, a									; check S key pressed 
+	jp nz, introWaitLoop
+    jp preinit
 
 preinit
 ;; initialise variables that are once per game load/start
@@ -1910,7 +1948,7 @@ TimeText
 LivesText
     DEFB _L,_I,_V,_E,_S,_EQ,$ff    
 TopLineText
-    DEFB _J,_U,_M,_P, 136, _R, _O, _0, _M, 0, 28, 28, 0,136,136, _G, _O, _L, _D, 28, 28, 0,136, 136, 136,_B,_Y,_T,_E,32,$ff    
+    DEFB _J,_U,_M,_P, 136, _R, _O, _O, _M, 0, 28, 28, 0,136,136, _G, _O, _L, _D, 28, 28, 0,136, 136, 136,_B,_Y,_T,_E,32,$ff    
 moveRoomDebugTest
     DEFB _M,_O,_V,_E,_R,_O,_O,_M,$ff
 moveRoomDebugFlagText
@@ -1933,11 +1971,11 @@ last_Score_txt
 high_Score_txt
 	DEFB 21,21,21,21,_H,_I,_G,_H,__,__,_S,_C,_O,_R,_E,21,21,21,21,$ff		
 credits_and_version_1
-	DEFB _B,_Y,__,_A,__,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,$ff
+	DEFB __,_B,_Y,__,_A,__,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,__, _2,_0,_2,_4,$ff
 credits_and_version_2
-	DEFB __,__,__,__,__,__,_2,_0,_2,_4,__,__,__,$ff    
+	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_0,_DT,_9,$ff    
 credits_and_version_3
-	DEFB _Y,_O,_U,_T,_U,_B,_E,_CL, _B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff       
+	DEFB __,__,__,_Y,_O,_U,_T,_U,_B,_E,_CL, _B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff       
     
 compareValueGround
     DEFB 0
