@@ -46,8 +46,8 @@
 CLS				EQU $0A2A
 ;;;;;#define DEBUG_NO_SCROLL
 ;;;;;#define DEBUG_PLAYER_XY
-;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 7
+#define DEBUG_START_IN_ROOM_X   1
+#define DEBUG_ROOM_TO_START_IN 3
 ;#define DEBUG_MULTIRATECOUNT 1
 
 
@@ -242,12 +242,7 @@ initVariables
     ld (gameTime_Minutes), a
     ld (gameTimeCounterJIFFIES), a
     ld (enemySpriteFrameZero), a
-    ld (enemySpriteFrameOne), a
-    ld hl, enemySpriteTwo
-    ld (enemySpritePointerZero), hl
-    ld hl, enemySpriteThree
-    ld (enemySpritePointerOne), hl
-    
+    ld (enemySpriteFrameOne), a  
     
     call initialiseEnemysForRoom
 
@@ -727,7 +722,7 @@ drawRoom
     ld a, (currentRoom)    
     cp 0
     jp z, skipCalcualteRoomCOnfig   
-    ld de, SIZE_OF_ROOM_CONFIG ;; should use this but doesn't work: (Room_2_Config - Room_1_Config) 
+    ld de, SIZE_OF_ROOM_CONFIG 
     ld b,a       
 drawRoomCalcOffsetToRoom    
     ;;; ad 32 to offset to get next room
@@ -1219,7 +1214,6 @@ drawEnemySprites
     ld (TEMP_enemySpritePos_CUR), hl
     ld a, (enemySpriteFrameZero)
     ld (TEMP_enemySpriteFrame), a
-    ld hl, enemySpriteTwo
     call drawEnemySprite
     ld hl, (TEMP_enemySpritePointer)
     ld (enemySpritePointerZero), hl 
@@ -1234,7 +1228,6 @@ drawEnemySprites
     ld (TEMP_enemySpritePos_CUR), hl
     ld a, (enemySpriteFrameOne)
     ld (TEMP_enemySpriteFrame), a    
-    ld hl, enemySpriteThree
     call drawEnemySprite
     ld hl, (TEMP_enemySpritePointer)
     ld (enemySpritePointerOne), hl 
@@ -1242,6 +1235,9 @@ drawEnemySprites
     ld (enemySpriteFrameOne), a    
     
     ret
+    
+;; drawEnemySprite 
+;;;;;;;;;;;;;    
 ;; before call set these from config
 ;; TEMP_enemySpritePointer   
 ;; TEMP_enemySpritePos_CUR 
@@ -1256,7 +1252,7 @@ drawEnemySprites
 ;; this will save the updated sprite 
 
 drawEnemySprite 
-    push hl
+    ;push hl
     ld a, (TEMP_enemySpriteFrame)
     inc a
     cp 4
@@ -1272,14 +1268,18 @@ drawEnemySprite
 resetEnemySpriteZ    
     xor a
     ld (TEMP_enemySpriteFrame), a
+    ;pop hl   ;; hl contains the enemySprite address at start
     
-    pop hl   ;; hl contains the enemySprite address at start
+    ld de, -48
+    ld hl, (TEMP_enemySpritePointer)
+    add hl, de
+    
     ;;ld hl, enemySpriteZero
     ld (TEMP_enemySpritePointer), hl
     jr drawEnemyAfterPopHL
     
 skipResetEnemySpriteZ         
-    pop hl  ; have to pop here if didn't jump to resetEnemySpriteZ to maintain stack
+    ;pop hl  ; have to pop here if didn't jump to resetEnemySpriteZ to maintain stack
 drawEnemyAfterPopHL
     ld de, (TEMP_enemySpritePos_CUR)
     ld hl, (TEMP_enemySpritePointer)
@@ -1308,7 +1308,10 @@ blankEnemySprites
     
     
 initialiseEnemysForRoom   
-
+    xor a    ; fastest and smallest way to clear a register
+    ld (enemySpriteFrameZero),a 
+    ld (enemySpriteFrameOne),a
+    
     ld hl, RoomConfig
     ld a, (currentRoom)    
     cp 0
@@ -1414,11 +1417,16 @@ skipCalcualteRoomCOnfig_E
     inc hl
     ;; the next two 16bit addreses are pointers to the sprite data
 
+    ;ld hl, enemySpriteZero
+    ;ld (enemySpritePointerZero), hl
+    ;ld hl, enemySpriteOne
+    ;ld (enemySpritePointerOne), hl 
+    
     push hl    
         ld e, (hl)                   ; load the low byte of the address into register e
         inc hl                       ; increment hl to point to the high byte of the address
         ld d, (hl)                   ; load the high byte of the address into register d
-    ld (enemySpritePointerZero), de
+        ld (enemySpritePointerZero), de
     pop hl
     inc hl
     inc hl     
@@ -1427,10 +1435,9 @@ skipCalcualteRoomCOnfig_E
         ld e, (hl)                   ; load the low byte of the address into register e
         inc hl                       ; increment hl to point to the high byte of the address
         ld d, (hl)                   ; load the high byte of the address into register d
-    ld (enemySpritePointerOne), de
+        ld (enemySpritePointerOne), de
     pop hl
-    inc hl
-    inc hl     
+    
     
     ret
 
@@ -1748,6 +1755,15 @@ enemySprite4by4Blank
     DEFB 0, 0, 0 ,0, 0, 0
     DEFB 0, 0, 0 ,0, 0, 0 
 
+
+enemySpriteZeroCopy
+	DEFB $11, $03, $03, $84, $05, $00, $00, $85, $05, $00, $00, $85,
+	DEFB $11, $83, $83, $81, $87, $83, $83, $04, $85, $00, $00, $05,
+	DEFB $11, $00, $00, $05, $02, $03, $03, $01, $00, $00, $00, $00,
+	DEFB $11, $07, $84, $00, $00, $82, $81, $00, $00, $00, $00, $00,
+	DEFB $11, $00, $00, $00, $00, $87, $04, $00, $00, $02, $01, $00,
+	DEFB $11, $00, $00, $00
+
 enemySpriteZero
 	DEFB $07, $03, $03, $84, $05, $00, $00, $85, $05, $00, $00, $85,
 	DEFB $82, $83, $83, $81, $87, $83, $83, $04, $85, $00, $00, $05,
@@ -1779,6 +1795,15 @@ enemySpriteThree
 	DEFB $04, $86, $00, $00, $02, $04, $86, $00, $00, $02, $04, $86,
 	DEFB $00, $00, $00, $00, $04, $00, $00, $00, $02, $04, $00, $00,
 	DEFB $86, $02, $04, $00    
+
+enemySpriteCopy
+	DEFB $11, $02, $04, $86, $00, $00, $02, $04, $00, $00, $00, $02,
+	DEFB $11, $00, $00, $00, $86, $02, $04, $00, $00, $86, $02, $04,
+	DEFB $11, $00, $86, $02, $00, $00, $00, $86, $86, $00, $00, $00,
+	DEFB $11, $86, $00, $00, $02, $04, $86, $00, $00, $02, $04, $86,
+	DEFB $11, $00, $00, $00, $04, $00, $00, $00, $02, $04, $00, $00,
+	DEFB $11, $02, $04, $00    
+
     
 
 gameTime_Seconds
@@ -1939,7 +1964,7 @@ firstEnemyAddress      ;;  36 bytes
     DEFB 1    ; enemy 0 full rate enemy = 0; slow rate = 1
     DEFB 1    ; enemy 1 full rate enemy = 0; slow  rate = 1
     DEFW enemySpriteOne
-    DEFW enemySpriteTwo
+    DEFW enemySpriteOne
 RoomZeroName    
     DEFB _C,_E,_N,_T,0,_C,_A,_V,_QM,0,$ff
     
@@ -2104,17 +2129,17 @@ Room_2_Config
     DEFW 515  ; treasure token offset from DF_CC
     DEFW 516  ; treasure token offset from DF_CC
     DEFW 631  ; enemySpriteZeroPos_ST 
-    DEFW 104  ; enemySpriteOnePos_ST  
+    DEFW 368   ; enemySpriteOnePos_ST  
     DEFW 652  ; enemySpriteZeroPos_END
-    DEFW 122  ; enemySpriteOnePos_END 
+    DEFW 387  ; enemySpriteOnePos_END 
     DEFW 640  ; enemySpriteZeroPos_CUR
-    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 380  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
-    DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 0    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
     DEFW enemySpriteOne
-    DEFW enemySpriteOne    
+    DEFW enemySpriteThree    
     DEFB _A,_R,_G,_C,0,_A,_R,_G,_V,0,$ff
 
     DEFB 4    ; room ID   
