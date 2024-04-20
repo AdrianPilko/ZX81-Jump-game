@@ -46,8 +46,10 @@
 CLS				EQU $0A2A
 ;;;;;#define DEBUG_NO_SCROLL
 ;;;;;#define DEBUG_PLAYER_XY
-#define DEBUG_START_IN_ROOM_X   1
-#define DEBUG_ROOM_TO_START_IN 3
+;;#define DEBUG_SPRITE_ADDRESS 1
+;;#define DEBUG_PRINT_ROOM_NUMBER 1
+;#define DEBUG_START_IN_ROOM_X   1
+;#define DEBUG_ROOM_TO_START_IN 3
 ;#define DEBUG_MULTIRATECOUNT 1
 
 
@@ -201,9 +203,7 @@ initVariables
 
 
     ;; initialise variables per game
-    ld a, 10
-    ld (jumpDelayBackoff), a
-    
+   
     xor a
     ld (evenOddLoopFlag), a
     ld (evenOddLoopCount), a
@@ -561,6 +561,11 @@ skipMove
     ld a, (evenOddLoopFlag)
     ld de, 72
     call print_number8bits    
+#endif    
+#ifdef DEBUG_PRINT_ROOM_NUMBER
+    ld a, (currentRoom)
+    ld de, 73
+    call print_number8bits
 #endif    
    
     jp gameLoop
@@ -1312,6 +1317,10 @@ initialiseEnemysForRoom
     ld (enemySpriteFrameZero),a 
     ld (enemySpriteFrameOne),a
     
+    ;ld a, 3
+    ;ld (currentRoom), a
+    
+    
     ld hl, RoomConfig
     ld a, (currentRoom)    
     cp 0
@@ -1319,7 +1328,7 @@ initialiseEnemysForRoom
     ld de, SIZE_OF_ROOM_CONFIG ;; should use this but doesn't work: (Room_2_Config - Room_1_Config) 
     ld b,a       
 drawRoomCalcOffsetToRoom_E    
-    ;;; ad 32 to offset to get next room
+    ;;; repeatedly add SIZE_OF_ROOM_CONFIG offset to get next room
     add hl, de 
     djnz drawRoomCalcOffsetToRoom_E
 skipCalcualteRoomCOnfig_E
@@ -1328,6 +1337,23 @@ skipCalcualteRoomCOnfig_E
     ld de, (RoomConfigAddress)
     ld hl, OFFSET_TO_ENEMY_SPRITES
     add hl, de
+        
+#ifdef DEBUG_SPRITE_ADDRESS
+    push hl
+    push hl 
+    pop bc
+    ld de, 68
+    call print_number16bits
+    pop hl 
+    
+    ld a, (currentRoom)
+    ld de, 73
+    call print_number8bits
+hardLoop
+    jp hardLoop
+#endif         
+    
+    
     
     push hl    
         ld e, (hl)                  ; load the low byte of the address into register e
@@ -1756,14 +1782,6 @@ enemySprite4by4Blank
     DEFB 0, 0, 0 ,0, 0, 0 
 
 
-enemySpriteZeroCopy
-	DEFB $11, $03, $03, $84, $05, $00, $00, $85, $05, $00, $00, $85,
-	DEFB $11, $83, $83, $81, $87, $83, $83, $04, $85, $00, $00, $05,
-	DEFB $11, $00, $00, $05, $02, $03, $03, $01, $00, $00, $00, $00,
-	DEFB $11, $07, $84, $00, $00, $82, $81, $00, $00, $00, $00, $00,
-	DEFB $11, $00, $00, $00, $00, $87, $04, $00, $00, $02, $01, $00,
-	DEFB $11, $00, $00, $00
-
 enemySpriteZero
 	DEFB $07, $03, $03, $84, $05, $00, $00, $85, $05, $00, $00, $85,
 	DEFB $82, $83, $83, $81, $87, $83, $83, $04, $85, $00, $00, $05,
@@ -1796,13 +1814,7 @@ enemySpriteThree
 	DEFB $00, $00, $00, $00, $04, $00, $00, $00, $02, $04, $00, $00,
 	DEFB $86, $02, $04, $00    
 
-enemySpriteCopy
-	DEFB $11, $02, $04, $86, $00, $00, $02, $04, $00, $00, $00, $02,
-	DEFB $11, $00, $00, $00, $86, $02, $04, $00, $00, $86, $02, $04,
-	DEFB $11, $00, $86, $02, $00, $00, $00, $86, $86, $00, $00, $00,
-	DEFB $11, $86, $00, $00, $02, $04, $86, $00, $00, $02, $04, $86,
-	DEFB $11, $00, $00, $00, $04, $00, $00, $00, $02, $04, $00, $00,
-	DEFB $11, $02, $04, $00    
+
 
     
 
@@ -1839,10 +1851,13 @@ score_mem_tens
     DEFB 0
 score_mem_hund
     DEFB 0
-jumpDelayBackoff    
-    DEFB 0
+DEBUG_DUMMY_VAR_1  
+    DEFW 0,0,0,0,0
 currentRoom
     DEFB 0
+DEBUG_DUMMY_VAR_2 
+    DEFW 0,0,0,0,0
+    
 roomJustEnteredFlag
     DEFB 0
 hitEnemyRestartRoomFlag
