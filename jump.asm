@@ -70,7 +70,8 @@ CLS				EQU $0A2A
 #define SCREEN_WIDTH 32
 #define SCREEN_HEIGHT 23   ; we can use the full screen becuase we're not using PRINT or PRINT AT ROM subroutines
 #define SHAPE_CHAR_WALL 189
-#define TREASURE_CHARACTER 141  ; $$$$
+#define INVERSE_TREASURE_CHARACTER 141  ; $$$$
+#define NORMAL_TREASURE_CHARACTER 13  ; $$$$
 
 #define INITIAL_PLAYER_X  5    ;;; TODO this should ultimately come from room config
 #define INITIAL_PLAYER_Y  3
@@ -78,7 +79,7 @@ CLS				EQU $0A2A
 #define ENEMY_CHAR_1 133
 #define ENEMY_CHAR_2 $5
 
-#define LAST_ROOM 8
+#define LAST_ROOM 9
 
 ;70
 #define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config    
@@ -372,14 +373,14 @@ gameLoop    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 waitForTVSync	
 	call vsync
 	djnz waitForTVSync
-
+    
     xor a
     ld (evenOddLoopFlag), a    ; used for multi rate enemies
     
     ld a, (evenOddLoopCount)
     inc a
     ld (evenOddLoopCount), a
-    cp 4    
+    cp 8    
     jr z, resetEvenOddAndSetFlag
     
     jr continueWithprintTime
@@ -388,6 +389,7 @@ resetEvenOddAndSetFlag
     ld (evenOddLoopCount), a
     ld a, 1
     ld (evenOddLoopFlag), a    ; used for multi rate enemies
+    call drawTreasureSub    
     
 continueWithprintTime      
     call printTime
@@ -413,7 +415,9 @@ continueWithprintTime
     ld a, (roomJustEnteredFlag)
     cp 1
     jp nz, skipRoomDraw
+    call resetTreasureInRoomSub
     call drawRoom      
+    
     
     ;; we're resetting player x y and currentPlayerLocation to fixed number
     ;; this needs to come from room config - player may then start in different location 
@@ -464,6 +468,8 @@ skipsetBlankSprite
     ld c, 8
     ld b, 8    
     call drawSprite
+    
+    call checkTreasureSub
     
     call drawPlatforms   ; always do this as jump may corrupt them  
        
@@ -937,27 +943,7 @@ doorDrawLoop
     add hl, de
     djnz doorDrawLoop
 
-    ld hl, OFFSET_TO_TREASURE        
-    ld b, 4
-drawTreasure    
-    ld de, (RoomConfigAddress)    
-    push hl
-        add hl, de    
-        ld e, (hl)                   ; load the low byte of the address into register e
-        inc hl                       ; increment hl to point to the high byte of the address
-        ld d, (hl)                   ; load the high byte of the address into register d    
-    
-    pop hl
-        inc hl 
-        inc hl
-    push hl       
-        ld hl, (DF_CC)
-        add hl, de 
-        ld a, TREASURE_CHARACTER    ; inverse $ for treasure
-        ld (hl), a
-    pop hl
-    djnz drawTreasure    
-    
+    call drawTreasureSub    
     call drawPlatforms   ; moved completely into own subroutine
 
     ld de, (RoomConfigAddress)
@@ -967,6 +953,137 @@ drawTreasure
     ex de, hl    
     call printstring    
     
+    ret
+
+resetTreasureInRoomSub
+
+    ld hl, OFFSET_TO_TREASURE        
+    ld b, 4    
+    ld de, (RoomConfigAddress)  
+    add hl, de    
+
+resetTreasureCheckLoop      
+    inc hl ;; this gets us to the address of the enable disable flag for that treasure
+    inc hl          ; hl is now the enable treasure flag in room config
+    ld (hl), INVERSE_TREASURE_CHARACTER    
+    inc hl
+    djnz resetTreasureCheckLoop 
+    ret
+
+
+checkTreasureSub
+    ld hl, OFFSET_TO_TREASURE        
+    ld b, 4    
+
+drawTreasureCheckLoop    
+    push hl 
+        ld de, (RoomConfigAddress)        
+        add hl, de    
+
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d        
+        
+        ld hl, (DF_CC)        
+        add hl, de
+        ld a, (hl)
+    pop hl 
+    
+    inc hl ;; hl here is the OFFSET_TO_TREASURE plus however many loops times 3bytes in each treasure config
+    inc hl ;; hl here is the OFFSET_TO_TREASURE plus however many loops times 3bytes in each treasure config
+
+        
+    ; push hl
+    ; push de
+    ; push bc
+    ; push af         
+        ; ld de, 69
+        ; ld hl, (DF_CC)        
+        ; add hl, de
+        ; ld (hl), a     ; a here is what is in the location on screen of the treausre (ie treasure or nothing player)
+    ; pop af 
+    ; pop bc    
+    ; pop de
+    ; pop hl     
+    cp INVERSE_TREASURE_CHARACTER
+    jr z, continueCheckingForNextTreasure
+    cp NORMAL_TREASURE_CHARACTER
+    jr z, continueCheckingForNextTreasure
+
+    ;; we need to get hl to point to the correct room config address offset up to the next enable disable for treasure
+    push hl 
+        ld de, (RoomConfigAddress)        
+        add hl, de  
+        
+        ; push hl
+        ; push de
+        ; push bc
+        ; push af 
+            ; ld a, (hl)    
+            ; ld de, 76
+            ; call print_number8bits
+        ; pop af 
+        ; pop bc    
+        ; pop de
+        ; pop hl  
+        xor a
+    
+        ld (hl), a
+    pop hl     
+continueCheckingForNextTreasure        
+    inc hl   ; this gets hl to next treasure config
+    
+    djnz drawTreasureCheckLoop 
+    ret
+
+
+drawTreasureSub    
+    ld hl, OFFSET_TO_TREASURE        
+    ld b, 4    
+drawTreasure    
+    push hl  ;; hl here is the OFFSET_TO_TREASURE plus however many loops times 3bytes in each treasure config
+        ld de, (RoomConfigAddress)        
+        add hl, de    
+
+        ;; after the next three lines de will point to the display address offset of the treasure
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d        
+
+        push hl 
+            inc hl ;; this gets us to the address of the enable disable flag for that treasure
+            ld a, (hl)  
+            cp 0
+        pop hl 
+    pop hl  ;; hl here is the OFFSET_TO_TREASURE plus however many loops times 3bytes in each treasure config
+    jr z, skipDrawTreasure    
+    
+    push hl       
+        ld hl, (DF_CC)
+        add hl, de                    
+        ld a, (treasureCharacter)
+        ld (hl), a
+    pop hl  
+skipDrawTreasure    
+    inc hl ;; hl here is the OFFSET_TO_TREASURE plus however many loops times 3bytes in each treasure config
+    inc hl ;; hl here is the OFFSET_TO_TREASURE plus however many loops times 3bytes in each treasure config   
+    inc hl ;; hl here is the OFFSET_TO_TREASURE plus however many loops times 3bytes in each treasure config   
+    djnz drawTreasure    
+
+    ld a, (goldToggleControl)
+    cp 1
+    jr z, goldToggle
+    ld a, 1
+    ld (goldToggleControl), a
+    ld a, INVERSE_TREASURE_CHARACTER    ; inverse $ for treasure
+    ld (treasureCharacter), a 
+    jr afterGoldToggle
+goldToggle
+    xor a
+    ld (goldToggleControl), a
+    ld a, NORMAL_TREASURE_CHARACTER    ; inverse $ for treasure
+    ld (treasureCharacter), a 
+afterGoldToggle      
     ret
     
     
@@ -1114,8 +1231,10 @@ GoldCollectColLoop_1
  
             ld a, (hl)
             inc hl
-            cp TREASURE_CHARACTER
+            cp NORMAL_TREASURE_CHARACTER
             jr z, incOnlyfoundGold_YES
+            cp INVERSE_TREASURE_CHARACTER
+            jr z, incOnlyfoundGold_YES            
             jr noGoldFoundBypass                
 incOnlyfoundGold_YES              ;; keep a count of gold found
             ld a, (goldFoundTemp)
@@ -1143,7 +1262,9 @@ GoldCollectColLoop
             ld a, (hl)
             ld de, 7
             add hl, de
-            cp TREASURE_CHARACTER
+            cp NORMAL_TREASURE_CHARACTER
+            jr z, incOnlyfoundGold_YES_2
+            cp INVERSE_TREASURE_CHARACTER
             jr z, incOnlyfoundGold_YES_2
             jr noGoldFoundBypass_2                
 incOnlyfoundGold_YES_2              ;; keep a count of gold found
@@ -1195,8 +1316,10 @@ noGoldFoundBypass_2
 GoldCollectColLoop_2       
             ld a, (hl)
             inc hl
-            cp TREASURE_CHARACTER
+            cp INVERSE_TREASURE_CHARACTER
             jr z, incOnlyfoundGold_YES_3
+            cp NORMAL_TREASURE_CHARACTER
+            jr z, incOnlyfoundGold_YES_3            
             jr noGoldFoundBypass_3               
 incOnlyfoundGold_YES_3              ;; keep a count of gold found
             ld a, (goldFoundTemp)
@@ -2094,7 +2217,8 @@ enemySpriteFrameZero
     DEFB 0
 enemySpriteFrameOne    
     DEFB 0
-    
+treasureCharacter
+    DEFB NORMAL_TREASURE_CHARACTER
 enemySprites   ;; keeping these to 4*4 for speed and size
 enemySprite4by4BlankPointer
     DEFW 0
@@ -2231,6 +2355,8 @@ justJumpFlag
     DEFB 0
 goldFoundCount
     DEFB 0
+goldToggleControl
+    DEFB 0
 goldFoundTemp    
     DEFB 0
 playerLives
@@ -2324,9 +2450,13 @@ Room_1_Config
 startOfRoom1Treasure      
     ;;; tokens 2 bytes each
     DEFW 169  ; treasure token offset from DF_CC   always 4 treasure (byte 28)    
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 170  ; treasure token offset from DF_CC  307
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 422  ; treasure token offset from DF_CC    
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 722  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     ;; enemy definition gets loaded into these when room entered
 firstEnemyAddress      ;;  36 bytes   
     DEFW 640  ; enemySpriteZeroPos_ST 
@@ -2386,9 +2516,13 @@ Room_2_Config
     ;;; tokens 2 bytes each
     
     DEFW 168  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 169  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 170  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 171  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
      
     DEFW 120  ; enemySpriteZeroPos_ST 
     DEFW 635  ; enemySpriteOnePos_ST  
@@ -2449,9 +2583,13 @@ Room_2_Config
     ;;; tokens 2 bytes each
   
     DEFW 300  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 333  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 303  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 336  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
@@ -2508,9 +2646,14 @@ Room_2_Config
    
     ;;; tokens 2 bytes each
     DEFW 239  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 514  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 515  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 516  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    
     DEFW 103  ; enemySpriteZeroPos_ST 
     DEFW 342   ; enemySpriteOnePos_ST  
     DEFW 124  ; enemySpriteZeroPos_END
@@ -2564,9 +2707,14 @@ Room_2_Config
     DEFB 3    ; length             (byte 27)       
     ;;; tokens 2 bytes each
     DEFW 579  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 580  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 271  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 304  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
@@ -2620,9 +2768,13 @@ Room_2_Config
     DEFB 2    ; length             (byte 27)    
     ;;; tokens 2 bytes each
     DEFW 583  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 584  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 585  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 586  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
@@ -2678,9 +2830,14 @@ Room_2_Config
     DEFB 2    ; length             (byte 27)    
     ;;; tokens 2 bytes each
     DEFW 583  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 584  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 585  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 586  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
@@ -2735,9 +2892,14 @@ Room_2_Config
     DEFB 2    ; length             (byte 27)    
     ;;; tokens 2 bytes each
     DEFW 583  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 584  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 585  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 586  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
@@ -2753,9 +2915,71 @@ Room_2_Config
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  1  ; enemy one orientation horizontal = 0 vertical = 1        
     DEFB _S,_T,_R,_C,_M,_P,_OP,_CP,__,__,$ff
+
+
+    DEFB 8    ; room ID   
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 196   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    
+    DEFB 8    ; character of platform 0 = disabled  (byte16)
+    DEFW 610  ; start of platform   17,18
+    DEFB 1    ; length   19
+    
+    DEFB 137    ; character of platform 0 = disabled  20
+    DEFW 454  ; start of platform  21,22
+    DEFB 1    ; length  23
+    
+    DEFB 128    ; character of platform 0 = disabled  24
+    DEFW 364  ; start of platform  25,26
+    DEFB 1    ; length             (byte 27)
+    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 13    ; length             (byte 27)        
+    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 64  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)    
+    ;;; tokens 2 bytes each
+    DEFW 583  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when controlling flashing
+    DEFW 584  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when controlling flashing    
+    DEFW 585  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when controlling flashing    
+    DEFW 586  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when controlling flashing    
+    DEFW 640  ; enemySpriteZeroPos_ST 
+    DEFW 113  ; enemySpriteOnePos_ST  
+    DEFW 647  ; enemySpriteZeroPos_END
+    DEFW 122  ; enemySpriteOnePos_END 
+    DEFW 640  ; enemySpriteZeroPos_CUR
+    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 1    ; enemySpriteOnePos_DIR 
+    DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 1    ; enemy 1 full rate enemy = 1; half rate = 0      
+    DEFW enemySpriteFour
+    DEFW enemySpriteTwo       
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  1  ; enemy one orientation horizontal = 0 vertical = 1        
+    DEFB _W,_A,_C,_K,_Y,_R,_A,_C,_E,_R,_S,$ff
+        
         
     
-    DEFB 8    ; room ID   
+    DEFB 9    ; room ID   
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
     DEFW 196   ; offset from DF_CC to top of door
@@ -2792,9 +3016,14 @@ Room_2_Config
     DEFB 2    ; length             (byte 27)    
     ;;; tokens 2 bytes each
     DEFW 583  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 584  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 585  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 691  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    
     DEFW 640  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
