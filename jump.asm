@@ -52,7 +52,8 @@ CLS				EQU $0A2A
 ;#define DEBUG_MULTIRATECOUNT 1
 ;#define DEBUG_START_IN_ROOM_X   1
 ;#define DEBUG_ROOM_TO_START_IN 8
-;#define DEBUG_COLLISION_DETECT 1
+;#define DEBUG_COLLISION_DETECT_1 1
+;#define DEBUG_COLLISION_DETECT_2 1
 
 #define KEYBOARD_READ_PORT_P_TO_Y	$DF
 ; for start key 
@@ -1094,11 +1095,23 @@ checkCollisionAndGoldCollect
     ld (hitEnemyRestartRoomFlag), a 
     
     push bc          
-    ld b, 4      ; check middle part of player top row
+    ld b, 5      ; check middle part of player top row
         push hl
-        inc hl 
         inc hl
-GoldCollectColLoop_1       
+GoldCollectColLoop_1      
+
+#ifdef DEBUG_COLLISION_DETECT_1
+    ;print a block to work out where hl is before first check
+    ;; even in debug mode comment in and out as needed or player falls through floor
+    push hl
+    push de
+    ld a, 136
+    ld (hl), a    
+    call print_number8bits
+    pop de
+    pop hl
+#endif   
+ 
             ld a, (hl)
             inc hl
             cp TREASURE_CHARACTER
@@ -1212,7 +1225,7 @@ skipBottomRowCollisionDet
 blankBottomRowInCheckCollision
 ;;; dont do it yet just check
 
-#ifdef DEBUG_COLLISION_DETECT
+#ifdef DEBUG_COLLISION_DETECT_2
     ;print a block to work out where hl is now after previous loop
     ;; even in debug mode comment in and out as needed or player falls through floor
     push hl
