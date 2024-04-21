@@ -49,9 +49,9 @@ CLS				EQU $0A2A
 ;;#define DEBUG_SPRITE_ADDRESS 1
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
-#define DEBUG_START_IN_ROOM_X   1
-#define DEBUG_ROOM_TO_START_IN 7
-
+;#define DEBUG_START_IN_ROOM_X   1
+;#define DEBUG_ROOM_TO_START_IN 7
+;#define DEBUG_COLLISION_DETECT 1
 
 #define KEYBOARD_READ_PORT_P_TO_Y	$DF
 ; for start key 
@@ -75,6 +75,8 @@ CLS				EQU $0A2A
 #define INITIAL_PLAYER_OFFSET 467
 #define ENEMY_CHAR_1 133
 #define ENEMY_CHAR_2 $5
+
+#define LAST_ROOM 8
 
 ;70
 #define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config    
@@ -338,7 +340,7 @@ initVariables
     ld (playerSpritePointer), hl 
     ld a, 2
     ld (compareValueGround), a
-    ld a, 3
+    ld a, 5
     ld (playerLives), a
     
     xor a
@@ -1095,11 +1097,11 @@ incOnlyfoundGold_YES              ;; keep a count of gold found
             ld (goldFoundTemp), a
 noGoldFoundBypass                
             cp 133
-            jr z, CollisionWithEnemy
+            jp z, CollisionWithEnemy
             cp 134
-            jr z, CollisionWithEnemy            
+            jp z, CollisionWithEnemy            
             cp 5
-            jr z, CollisionWithEnemy            
+            jp z, CollisionWithEnemy            
             djnz GoldCollectColLoop_1          
             ld a, (goldFoundTemp)
             cp 0
@@ -1124,21 +1126,113 @@ incOnlyfoundGold_YES_2              ;; keep a count of gold found
             ld (goldFoundTemp), a
 noGoldFoundBypass_2  
             cp 133
-            jr z, CollisionWithEnemy
+            jp z, CollisionWithEnemy
             cp 134
-            jr z, CollisionWithEnemy            
+            jp z, CollisionWithEnemy            
             cp 5
-            jr z, CollisionWithEnemy            
+            jp z, CollisionWithEnemy            
             djnz GoldCollectColLoop
         pop hl
         ld de, 33             ;; move next write position to next row        
         add hl, de
     pop bc
     djnz checkAndGoldCollectRowLoop    
+  
+   
+   ;;; check YSpeed , if > 0 then wipe the line below and don't check for enemy or gold
+   ;; YSpeed is only ever non zero when player moving up, not when moving down
+   ld a, (YSpeed)
+   cp 5 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
+   jp z, blankBottomRowInCheckCollision   
+   cp 4 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
+   jp z, blankBottomRowInCheckCollision   
+   cp 3 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
+   jp z, blankBottomRowInCheckCollision   
+   cp 2 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
+   jp z, blankBottomRowInCheckCollision   
+   cp 1
+   jp nz, skipBottomRowCollisionDet
+   ;cp 0
+   ;jp nz, skipBottomRowCollisionDet
+   
+   
+
+   
+   ld de, 33             
+   add hl, de
+   
+   push bc          
+        ld b, 4      ; check middle part of player bottom row
+        push hl
+        inc hl 
+        inc hl
+GoldCollectColLoop_2       
+            ld a, (hl)
+            inc hl
+            cp TREASURE_CHARACTER
+            jr z, incOnlyfoundGold_YES_3
+            jr noGoldFoundBypass_3               
+incOnlyfoundGold_YES_3              ;; keep a count of gold found
+            ld a, (goldFoundTemp)
+            inc a
+            ld (goldFoundTemp), a
+noGoldFoundBypass_3                
+            cp 133
+            jr z, CollisionWithEnemy
+            cp 134
+            jr z, CollisionWithEnemy            
+            cp 5
+            jr z, CollisionWithEnemy            
+            djnz GoldCollectColLoop_2          
+            ld a, (goldFoundTemp)
+            cp 0
+            jp nz, foundGold_YES
+        pop hl
+    pop bc        
+
+skipBottomRowCollisionDet
     ld a, (goldFoundTemp)
     cp 0
     jp nz, prefoundGold_YES
-    jp justPrintScore    
+    jp justPrintScore       
+
+blankBottomRowInCheckCollision
+;;; dont do it yet just check
+
+#ifdef DEBUG_COLLISION_DETECT
+    ;print a block to work out where hl is now after previous loop
+    ;; even in debug mode comment in and out as needed or player falls through floor
+    push hl
+    push de
+    ld a, 136
+    ld (hl), a
+    
+    ;;also  print YSpeed
+    ld a, (YSpeed)
+    ld de, 68
+    call print_number8bits
+    pop de
+    pop hl
+#endif   
+    ;; only blank middle 4 blocks
+    ld de, 34
+    add hl, de
+    ld a, 0        
+    ld (hl), a
+    inc hl
+    ld (hl), a
+    inc hl
+    ld (hl), a
+    inc hl
+    ld (hl), a
+    inc hl
+    ld (hl), a
+    
+    ld a, (goldFoundTemp)
+    cp 0
+    jp nz, prefoundGold_YES
+    jp justPrintScore     
+    
 prefoundGold_YES
     push bc
     push hl
@@ -2612,6 +2706,7 @@ Room_2_Config
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1        
     DEFB _T,_H,_E,0,_E,_N,_D,0,0,$ff
+    
 
     
 VariablesEnd:   DEFB $80
