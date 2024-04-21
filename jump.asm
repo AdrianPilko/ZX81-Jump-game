@@ -51,7 +51,7 @@ CLS				EQU $0A2A
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
 ;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 8
+;#define DEBUG_ROOM_TO_START_IN 3
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -2430,7 +2430,7 @@ Room_1_Config
     
     DEFB 1    ; 1 = enabled 0 = disabled  (byte16)
     DEFW 610  ; start of platform   17,18
-    DEFB 4    ; length   19
+    DEFB 7    ; length   19
     
     DEFB 1    ; 1 = enabled 0 = disabled  
     DEFW 454  ; start of platform  21,22
@@ -2655,7 +2655,7 @@ Room_2_Config
     DEFB 1    ; is the trreasure enabled or not - used when 
     
     DEFW 103  ; enemySpriteZeroPos_ST 
-    DEFW 342   ; enemySpriteOnePos_ST  
+    DEFW 333   ; enemySpriteOnePos_ST  
     DEFW 124  ; enemySpriteZeroPos_END
     DEFW 355  ; enemySpriteOnePos_END 
     DEFW 120  ; enemySpriteZeroPos_CUR
@@ -2716,7 +2716,7 @@ Room_2_Config
     DEFB 1    ; is the trreasure enabled or not - used when 
     
     DEFW 640  ; enemySpriteZeroPos_ST 
-    DEFW 113  ; enemySpriteOnePos_ST  
+    DEFW 102  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
     DEFW 122  ; enemySpriteOnePos_END 
     DEFW 640  ; enemySpriteZeroPos_CUR
@@ -2728,7 +2728,7 @@ Room_2_Config
     DEFW enemySpriteOne
     DEFW enemySpriteThree      
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
-    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1    
+    DEFB  1  ; enemy one orientation horizontal = 0 vertical = 1    
     DEFB _L,_O,_S,_T,0,_G,_O,_L,_D,0,$ff
     
     DEFB 5    ; room ID   
