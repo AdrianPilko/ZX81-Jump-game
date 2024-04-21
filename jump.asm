@@ -1,4 +1,5 @@
 ; Copyright (c) 2024 Adrian Pilkington
+; Copyright (c) 2024 Adrian Pilkington
 
 ; Permission is hereby granted, free of charge, to any person obtaining a copy
 ; of this software and associated documentation files (the "Software"), to deal
@@ -50,7 +51,7 @@ CLS				EQU $0A2A
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
 ;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 7
+;#define DEBUG_ROOM_TO_START_IN 8
 ;#define DEBUG_COLLISION_DETECT 1
 
 #define KEYBOARD_READ_PORT_P_TO_Y	$DF
@@ -730,6 +731,18 @@ checkIfPlatformOrGroundEND
 
 
 checkAndClearDoor
+;;; special case for the last room - it's setup so you can only 
+;; ever get 3 of the 4 gold - if you do and it's the last room then player does a dance!!
+    ld a, (currentRoom) 
+    cp LAST_ROOM
+    jr z, checkThreeGold
+    jr checkNormalNumberGold
+checkThreeGold
+    ld a, (goldFoundInRoom)
+    cp 3
+    jp z, playerWonDoDanceMoves   ;;    :-)
+    
+checkNormalNumberGold    
 ;; works on the premise that there's always 4 gold per room
     ld a, (goldFoundInRoom)
     cp 4
@@ -1687,6 +1700,79 @@ hardLoop
     
     ret
 
+
+playerWonDoDanceMoves    
+    call CLS
+    ld a, 1
+    ld a, (danceLoop8BitCount)
+    
+    ld bc, 70    
+    ld de, YouWonText
+    
+    call printstring
+    
+    ld hl, 199
+    ld (dancePos), hl
+    
+    ld b, 64    
+    
+daneceLoop
+    push bc
+        ld b,10
+danceMoves_1
+        push bc	
+            ld de, (dancePos)    
+            ld hl, Display+1 
+            add hl, de        
+            ex de, hl
+            ld hl, playerSpriteRightMove
+            ld c, 8
+            ld b, 8    
+            call drawSprite   
+        pop bc
+        djnz danceMoves_1
+        ld b, 10
+danceMoves_2
+        push bc
+            ld de, (dancePos)
+            ld hl, Display+1 
+            add hl, de        
+            ex de, hl
+            ld hl, playerSpriteRightMove
+            ld c, 8
+            ld b, 8    
+            call drawSprite   
+        pop bc
+        djnz danceMoves_2
+
+    ld a, (danceLoop8BitCount)
+    cp 10
+    jp z, reverseDance
+    jp forwardDanceMove
+reverseDance    
+    dec a
+    ld (danceLoop8BitCount), a
+    
+    ld hl, (dancePos)
+    dec hl
+    ld (dancePos), hl    
+    jp danceCheckLoop
+forwardDanceMove    
+    inc a
+    ld (danceLoop8BitCount), a
+    
+    ld hl, (dancePos)
+    inc hl
+    ld (dancePos), hl
+danceCheckLoop    
+    pop bc        
+    djnz daneceLoop
+
+    pop hl  ; the thing that jumped here was in a subroutine that was called so pop stack
+    ;; no ret, we jump to restart game 
+    jp intro_title		
+
+
 printTime    
     ld bc, 55 
     ld de, TimeText
@@ -1736,6 +1822,7 @@ printLives
     ld de, 51    
     call print_number8bits        
     ret
+
     
 
 
@@ -2064,7 +2151,8 @@ moveRoomDebugTest
     DEFB _M,_O,_V,_E,_R,_O,_O,_M,$ff
 moveRoomDebugFlagText
     DEFB _F,_L,_A,_G, $ff    
-
+YouWonText
+    DEFB _Y,_O,_U,__,_W,_O,_N,__,_N,_O,_W,__,__,_D,_A,_N,_C,_E,_CL,_MI,_CP,_CP,_CP,$ff    
 
 
 title_screen_txt
@@ -2114,7 +2202,10 @@ currentRoom
     DEFB 0
 DEBUG_DUMMY_VAR_2 
     DEFW 0,0,0,0,0
-    
+dancePos
+    DEFW 0 
+danceLoop8BitCount    
+    DEFB 0
 roomJustEnteredFlag
     DEFB 0
 hitEnemyRestartRoomFlag
