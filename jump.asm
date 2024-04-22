@@ -38,6 +38,7 @@
 ;;    7) add disapearing platforms and to room config 
 ;;    8) add more platforms  ONGOING (now can have 5)
 ;;    9) optimise the player check collision with gold to use only outer blocks DONE
+;;   10) vertical moving enemys
 
 ;some #defines for compatibility with other assemblers
 #define         DEFB .byte 
@@ -51,7 +52,7 @@ CLS				EQU $0A2A
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
 ;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 3
+;#define DEBUG_ROOM_TO_START_IN 8
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -2268,6 +2269,13 @@ enemySpriteFour
 	DEFB $00, $82, $81, $00, $00, $07, $84, $00, $00, $00, $00, $00,
 	DEFB $00, $00, $00, $00, $00, $87, $04, $00, $00, $02, $01, $00,
 	DEFB $00, $00, $00, $00
+enemySpriteFive    
+	DEFB $00, $85, $05, $00, $87, $81, $82, $04, $81, $04, $87, $82,
+	DEFB $82, $05, $85, $81, $00, $87, $04, $00, $00, $81, $82, $00,
+	DEFB $87, $82, $81, $04, $85, $81, $82, $05, $01, $02, $01, $02,
+	DEFB $00, $81, $82, $00, $00, $82, $81, $00, $00, $82, $81, $00,
+	DEFB $00, $87, $04, $00, $00, $81, $82, $00, $87, $82, $81, $04,
+	DEFB $85, $81, $82, $05    
 
     
 
@@ -2673,7 +2681,7 @@ Room_2_Config
     DEFB 4    ; room ID   
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
-    DEFW 196   ; offset from DF_CC to top of door
+    DEFW 427   ; offset from DF_CC to top of door
     DEFB 8    ; 9 blocks high
     DEFB 1    ; ID of next room from this one
     DEFB 0    ; Door orientation east=1  0= door disabled
@@ -2734,7 +2742,7 @@ Room_2_Config
     DEFB 5    ; room ID   
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
-    DEFW 196   ; offset from DF_CC to top of door
+    DEFW 526   ; offset from DF_CC to top of door
     DEFB 8    ; 9 blocks high
     DEFB 1    ; ID of next room from this one
     DEFB 0    ; Door orientation east=1  0= door disabled
@@ -2767,29 +2775,29 @@ Room_2_Config
     DEFW 64  ; start of platform  25,26
     DEFB 2    ; length             (byte 27)    
     ;;; tokens 2 bytes each
-    DEFW 583  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 508  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFB 1    ; is the trreasure enabled or not - used when 
-    DEFW 584  ; treasure token offset from DF_CC
+    DEFW 510  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
-    DEFW 585  ; treasure token offset from DF_CC
+    DEFW 511  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
-    DEFW 586  ; treasure token offset from DF_CC
+    DEFW 513  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 640  ; enemySpriteZeroPos_ST 
-    DEFW 113  ; enemySpriteOnePos_ST  
+    DEFW 333  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
-    DEFW 122  ; enemySpriteOnePos_END 
+    DEFW 348  ; enemySpriteOnePos_END 
     DEFW 640  ; enemySpriteZeroPos_CUR
-    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 345  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
-    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
-    DEFW enemySpriteTwo
-    DEFW enemySpriteOne  
+    DEFB 1    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteZero
+    DEFW enemySpriteThree  
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1    
-    DEFB _S,_E,_E,_N,0,_B,_4,_QM,_QM,0,$ff
+    DEFB _A,_L,_L,_T,_I,_M,_I,_N,_G,0,$ff
 
 
     
@@ -2852,7 +2860,7 @@ Room_2_Config
     DEFW enemySpriteTwo    
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1        
-    DEFB _S,_E,_E,_N,0,_B,_5,_QM,_QM,0,$ff
+    DEFB _S,_E,_E,_N,0,_B,_4,_QM,_QM,0,$ff
 
 
     DEFB 7    ; room ID   
@@ -2971,10 +2979,10 @@ Room_2_Config
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 1    ; enemy 1 full rate enemy = 1; half rate = 0      
-    DEFW enemySpriteFour
-    DEFW enemySpriteTwo       
+    DEFW enemySpriteFive
+    DEFW enemySpriteFive       
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
-    DEFB  1  ; enemy one orientation horizontal = 0 vertical = 1        
+    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1        
     DEFB _W,_A,_C,_K,_Y,_R,_A,_C,_E,_R,_S,$ff
         
         
@@ -3038,7 +3046,7 @@ Room_2_Config
     DEFW enemySpriteThree    
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1        
-    DEFB _T,_H,_E,0,_E,_N,_D,0,0,$ff
+    DEFB _Z,_X,_8,_1,_R,_U,_L,_E,_S,$ff
     
 
     
