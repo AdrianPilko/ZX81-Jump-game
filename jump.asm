@@ -52,7 +52,7 @@ CLS				EQU $0A2A
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
 ;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 8
+;#define DEBUG_ROOM_TO_START_IN 9
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -344,7 +344,7 @@ initVariables
     ld (playerSpritePointer), hl 
     ld a, 2
     ld (compareValueGround), a
-    ld a, 5
+    ld a, 6
     ld (playerLives), a
     
     xor a
@@ -2983,7 +2983,7 @@ Room_2_Config
     DEFW enemySpriteFive       
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1        
-    DEFB _W,_A,_C,_K,_Y,_R,_A,_C,_E,_R,_S,$ff
+    DEFB _W,_A,_C,_K,_Y,_R,_A,_C,_E,_S,$ff
         
         
     
@@ -3013,7 +3013,7 @@ Room_2_Config
     
     DEFB 128    ; character of platform 0 = disabled  24
     DEFW 364  ; start of platform  25,26
-    DEFB 20    ; length             (byte 27)
+    DEFB 18    ; length             (byte 27)
     
     DEFB 0    ; 1 = enabled 0 = disabled  
     DEFW 394  ; start of platform  25,26
@@ -3036,17 +3036,18 @@ Room_2_Config
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
     DEFW 122  ; enemySpriteOnePos_END 
-    DEFW 640  ; enemySpriteZeroPos_CUR
-    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 643  ; enemySpriteZeroPos_CUR
+    DEFW 115  ; enemySpriteOnePos_CUR 
     DEFW 1    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
-    DEFW enemySpriteOne
+    DEFW enemySpriteTwo
     DEFW enemySpriteThree    
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1        
-    DEFB _Z,_X,_8,_1,_R,_U,_L,_E,_S,$ff
+    DEFB _Z,_X,_8,_1,_R,_U,_L,_E,$ff 
+
     
 
     
