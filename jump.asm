@@ -2276,7 +2276,13 @@ enemySpriteFive
 	DEFB $00, $81, $82, $00, $00, $82, $81, $00, $00, $82, $81, $00,
 	DEFB $00, $87, $04, $00, $00, $81, $82, $00, $87, $82, $81, $04,
 	DEFB $85, $81, $82, $05    
-
+enemySpriteSix    
+	DEFB $03, $84, $07, $03, $87, $81, $82, $04, $81, $00, $00, $82,
+	DEFB $82, $00, $00, $81, $00, $87, $04, $00, $00, $81, $82, $00,
+	DEFB $87, $05, $85, $04, $85, $04, $87, $05, $03, $84, $07, $03,
+	DEFB $00, $81, $82, $00, $00, $82, $81, $00, $00, $82, $81, $00,
+	DEFB $00, $87, $04, $00, $00, $81, $82, $00, $87, $82, $81, $04,
+	DEFB $85, $81, $82, $05
     
 
 gameTime_Seconds
@@ -2477,7 +2483,7 @@ firstEnemyAddress      ;;  36 bytes
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 0; slow rate = 1
     DEFB 1    ; enemy 1 full rate enemy = 0; slow  rate = 1    
-    DEFW enemySpriteOne
+    DEFW enemySpriteSix
     DEFW enemySpriteTwo
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1    
