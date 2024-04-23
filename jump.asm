@@ -3179,7 +3179,7 @@ Room_2_Config
     DEFB 5        ;; X position left most is zero
     DEFB 3        ;; Y position bottom is 0
     DEFW 467      ;; screen memory offset    
-    DEFB _Z,_X,_8,_1,_R,_U,_L,_E,$ff 
+    DEFB _Z,_X,_8,_1,_R,_U,_L,_E,__,__,$ff   ; this has to be 10 characters
 
     
 
