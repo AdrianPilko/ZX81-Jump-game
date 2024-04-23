@@ -52,7 +52,7 @@ CLS				EQU $0A2A
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
 ;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 9
+;#define DEBUG_ROOM_TO_START_IN 11
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -354,6 +354,7 @@ initVariables
 
     ld hl, enemySprite4by4Blank
     ld (enemySprite4by4BlankPointer), hl
+
 
 #ifdef DEBUG_START_IN_ROOM_X    
     ld a, DEBUG_ROOM_TO_START_IN
@@ -1457,50 +1458,111 @@ checkEvenOddZeroSprite
     ld a, (evenOddLoopFlag)    ; used for multi rate enemies
     cp 0
     jp z, noUpdateSpriteZero
-afterCheckEvenOddZero    
+afterCheckEvenOddZero 
+;;;;;;;;;;;;
+;;; we've done the checks and we should update the sprite position
+;;;;;;;;;;;;   
+;   ld hl, 33
+;   ld (enemySpriteZeroPos_DIR), hl
+;;; check which direction we're going to decide is checking end +'ve or -'ve
+;;; horizontal enemies have DIR = 1 or -1 
+;;; vertical enemies have DIR = +33 or -33 (this adds or subtracts one row)
     ld hl, (enemySpriteZeroPos_DIR)
     ld a, l
-    cp 1
-    jp z, compareEndPos_Z
-    ;; else compare _ST
-    jp compare_Z_ST
-compareEndPos_Z    
+    cp 1                    ;; check the positive direction for horizontal enemy
+    jr z, compareEndPos_Z_horiz
+    cp 33                   ;; check the positive direction for vertical enemy
+    jr z, compareEndPos_Z_vert
+    cp -1
+    jr z, compareStartPos_Z_horiz
+    cp -33
+    jr z, compareStartPos_Z_vert
+    jp noUpdateSpriteZero  ;; shouldn't hit this !!!
+    
+compareEndPos_Z_horiz    
     ld hl, (enemySpriteZeroPos_CUR)
     ld de, (enemySpriteZeroPos_END)
-    inc hl
+    inc hl       ;; test update inc because column update for horizontal enemy
     ld a, h
     cp d
     jp nz, actuallyUpdateEnemy_Z
     ld a, l
     cp e
     jp nz, actuallyUpdateEnemy_Z
-    ;; else we have hit the end
+    ;; else we have hit the end reverse direction 
     ld hl, -1
     ld (enemySpriteZeroPos_DIR), hl
     jp actuallyUpdateEnemy_Z
-compare_Z_ST   ; this is the else compare with _ST    
+compareEndPos_Z_vert    
     ld hl, (enemySpriteZeroPos_CUR)
-    ld de, (enemySpriteZeroPos_ST)
-    inc hl
+    ld de, 33  ;; test adding 33 because row update for vertical enemy 
+    add hl, de
+    ld de, (enemySpriteZeroPos_END)
+    
     ld a, h
     cp d
     jp nz, actuallyUpdateEnemy_Z
     ld a, l
     cp e
     jp nz, actuallyUpdateEnemy_Z
-    ;; else we have hit the end
+    ;; else we have hit the end reverse direction 
+    ld hl, -33
+    ld (enemySpriteZeroPos_DIR), hl
+    jp actuallyUpdateEnemy_Z
+    
+compareStartPos_Z_horiz
+    ld hl, (enemySpriteZeroPos_CUR)
+    ld de, (enemySpriteZeroPos_ST)
+    dec hl       ;; test update inc because column update for horizontal enemy
+    ld a, h
+    cp d
+    jp nz, actuallyUpdateEnemy_Z
+    ld a, l
+    cp e
+    jp nz, actuallyUpdateEnemy_Z
+    ;; else we have hit the end reverse direction 
     ld hl, 1
     ld (enemySpriteZeroPos_DIR), hl
-   
+    jp actuallyUpdateEnemy_Z
+    
+compareStartPos_Z_vert      
+    ld hl, (enemySpriteZeroPos_CUR)
+    ld de, -33  ;; test adding -33 because row update for vertical enemy 
+    add hl, de
+    ld de, (enemySpriteZeroPos_ST)
+    
+    ld a, h
+    cp d
+    jp nz, actuallyUpdateEnemy_Z
+    ld a, l
+    cp e
+    jp nz, actuallyUpdateEnemy_Z
+    ;; else we have hit the end reverse direction 
+    ld hl, 33
+    ld (enemySpriteZeroPos_DIR), hl
+    jp actuallyUpdateEnemy_Z
+;;;;
+;;;;  this is the code to actually update the sprite position based on 
+;;;;  the amount ot add (or -'ve add i.e. subtract!) in enemySpriteZeroPos_DIR
+;;;;  and current position (enemySpriteZeroPos_CUR)
 actuallyUpdateEnemy_Z
     ld hl, (enemySpriteZeroPos_CUR)
     ld de, (enemySpriteZeroPos_DIR)
     add hl, de
     ld (enemySpriteZeroPos_CUR), hl
+    
+    ;ld bc, (enemySpriteZeroPos_DIR)     ;; currentPlayerLocation is already offset to
+    ;ld de, 70
+    ;call print_number16bits
+    
 
 noUpdateSpriteZero
-;;; sprite 2
+;;; update sprite 2
 
+
+
+    ;check the direction then decide which ST or END to compare
+   
     ld a, (enemySpriteOnePos_RATE)
     cp 1
     jp z, checkEvenOddOneSprite  ; check evenOdd 
@@ -1509,50 +1571,102 @@ checkEvenOddOneSprite
     ld a, (evenOddLoopFlag)    ; used for multi rate enemies
     cp 0
     jp z, noUpdateSpriteOne
-afterCheckEvenOddOne    
-
-
-    ;check the direction then decide which ST or END to compare
+afterCheckEvenOddOne 
+;;;;;;;;;;;;
+;;; we've done the checks and we should update the sprite position
+;;;;;;;;;;;;   
+;   ld hl, 33
+;   ld (enemySpriteOnePos_DIR), hl
+;;; check which direction we're going to decide is checking end +'ve or -'ve
+;;; horizontal enemies have DIR = 1 or -1 
+;;; vertical enemies have DIR = +33 or -33 (this adds or subtracts one row)
     ld hl, (enemySpriteOnePos_DIR)
     ld a, l
-    cp 1
-    jp z, compareEndPos_One
-    ;; else compare _ST
-    jp compare_One_ST
-compareEndPos_One    
+    cp 1                    ;; check the positive direction for horizontal enemy
+    jr z, compareEndPosOne_horiz
+    cp 33                   ;; check the positive direction for vertical enemy
+    jr z, compareEndPosOne_vert
+    cp -1
+    jr z, compareStartPosOne_horiz
+    cp -33
+    jr z, compareStartPosOne_vert
+    jp noUpdateSpriteOne  ;; shouldn't hit this !!!
+    
+compareEndPosOne_horiz    
     ld hl, (enemySpriteOnePos_CUR)
     ld de, (enemySpriteOnePos_END)
-    inc hl
+    inc hl       ;; test update inc because column update for horizontal enemy
     ld a, h
     cp d
-    jp nz, actuallyUpdateEnemy_One
+    jp nz, actuallyUpdateEnemyOne
     ld a, l
     cp e
-    jp nz, actuallyUpdateEnemy_One
-    ;; else we have hit the end
+    jp nz, actuallyUpdateEnemyOne
+    ;; else we have hit the end reverse direction 
     ld hl, -1
     ld (enemySpriteOnePos_DIR), hl
-    jp actuallyUpdateEnemy_One
-compare_One_ST   ; this is the else compare with _ST    
+    jp actuallyUpdateEnemyOne
+compareEndPosOne_vert    
     ld hl, (enemySpriteOnePos_CUR)
-    ld de, (enemySpriteOnePos_ST)
-    inc hl
+    ld de, 33  ;; test adding 33 because row update for vertical enemy 
+    add hl, de
+    ld de, (enemySpriteOnePos_END)
+    
     ld a, h
     cp d
-    jp nz, actuallyUpdateEnemy_One
+    jp nz, actuallyUpdateEnemyOne
     ld a, l
     cp e
-    jp nz, actuallyUpdateEnemy_One
-    ;; else we have hit the end
+    jp nz, actuallyUpdateEnemyOne
+    ;; else we have hit the end reverse direction 
+    ld hl, -33
+    ld (enemySpriteOnePos_DIR), hl
+    jp actuallyUpdateEnemyOne
+    
+compareStartPosOne_horiz
+    ld hl, (enemySpriteOnePos_CUR)
+    ld de, (enemySpriteOnePos_ST)
+    dec hl       ;; test update inc because column update for horizontal enemy
+    ld a, h
+    cp d
+    jp nz, actuallyUpdateEnemyOne
+    ld a, l
+    cp e
+    jp nz, actuallyUpdateEnemyOne
+    ;; else we have hit the end reverse direction 
     ld hl, 1
     ld (enemySpriteOnePos_DIR), hl
-   
-actuallyUpdateEnemy_One
+    jp actuallyUpdateEnemyOne
+    
+compareStartPosOne_vert      
+    ld hl, (enemySpriteOnePos_CUR)
+    ld de, -33  ;; test adding -33 because row update for vertical enemy 
+    add hl, de
+    ld de, (enemySpriteOnePos_ST)
+    
+    ld a, h
+    cp d
+    jp nz, actuallyUpdateEnemyOne
+    ld a, l
+    cp e
+    jp nz, actuallyUpdateEnemyOne
+    ;; else we have hit the end reverse direction 
+    ld hl, 33
+    ld (enemySpriteOnePos_DIR), hl
+    jp actuallyUpdateEnemyOne
+;;;;
+;;;;  this is the code to actually update the sprite position based on 
+;;;;  the amount ot add (or -'ve add i.e. subtract!) in enemySpriteOnePos_DIR
+;;;;  and current position (enemySpriteOnePos_CUR)
+actuallyUpdateEnemyOne
     ld hl, (enemySpriteOnePos_CUR)
     ld de, (enemySpriteOnePos_DIR)
     add hl, de
     ld (enemySpriteOnePos_CUR), hl
-    
+
+
+
+
 noUpdateSpriteOne
     
     ret
@@ -1642,19 +1756,71 @@ drawEnemyAfterPopHL
     
     
 blankEnemySprites    
+    ld hl, (enemySpriteZeroPos_DIR)
+    ld a, l
+    cp 1                    ;; check the positive direction for horizontal enemy
+    jr z, useHorizSpritePtr
+    cp 33                   ;; check the positive direction for vertical enemy
+    jr z, useVertSpritePtr
+    cp -1
+    jr z, useHorizSpritePtr
+    cp -33
+    jr z, useVertSpritePtr
+    jp useHorizSpritePtr  ; default to horiz
+    
+useHorizSpritePtr    
     ld de, (enemySpriteZeroPos_CUR)
     dec de
     ld hl, (enemySprite4by4BlankPointer)
     ld b, 4
     ld c, 6
     call drawSprite    
+    jr updateBlankSpriteOne
+useVertSpritePtr
+    ld de, (enemySpriteZeroPos_CUR)
+    ld hl, -33
+    add hl, de 
+    ex de, hl
+    ld hl, (enemySprite4by4BlankPointer)
+    ld b, 6
+    ld c, 4
+    call drawSprite    
+
+
+updateBlankSpriteOne
+    ld hl, (enemySpriteOnePos_DIR)
+    ld a, l
+    cp 1                    ;; check the positive direction for horizontal enemy
+    jr z, useHorizSpritePtr_one
+    cp 33                   ;; check the positive direction for vertical enemy
+    jr z, useVertSpritePtr_one
+    cp -1
+    jr z, useHorizSpritePtr_one
+    cp -33
+    jr z, useVertSpritePtr_one
+    jp useHorizSpritePtr_one  ; default to horiz
     
+useHorizSpritePtr_one    
     ld de, (enemySpriteOnePos_CUR)
     dec de
     ld hl, (enemySprite4by4BlankPointer)
     ld b, 4
     ld c, 6
     call drawSprite        
+    jr endOfDrawBlank
+useVertSpritePtr_one
+    ld de, (enemySpriteOnePos_CUR)
+    ld hl, -33
+    add hl, de 
+    ex de, hl
+    ld hl, (enemySprite4by4BlankPointer)
+    ld b, 6
+    ld c, 4
+    call drawSprite        
+
+
+
+endOfDrawBlank    
     ret 
     
     
@@ -1774,12 +1940,20 @@ hardLoop
 
     ;; not from config yet
     push hl 
-    ld hl, 1
-    ld (enemySpriteZeroPos_DIR), hl        
-    ld (enemySpriteOnePos_DIR), hl
-    pop hl
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d
+        ld (enemySpriteZeroPos_DIR), de        
+    pop hl 
     inc hl
-    inc hl       
+    inc hl
+    push hl 
+        ld e, (hl)                   ; load the low byte of the address into register e
+        inc hl                       ; increment hl to point to the high byte of the address
+        ld d, (hl)                   ; load the high byte of the address into register d    
+        ld (enemySpriteOnePos_DIR), de
+    pop hl
+
     inc hl
     inc hl     
     
@@ -1816,11 +1990,16 @@ hardLoop
     inc hl     
 
 ;; orientation of enemy movement 0 = horizontal 1 = vertica
+
+
+;;; not needed now use enemySpriteZeroPos_DIR=1 -1 (horiz)  or 33 -33 (vertical
     ld a, (hl)
     ld (enemySpriteZero_HorizVert), a
     inc hl
     ld a, (hl)    
     ld (enemySpriteOne_HorizVert), a
+    
+        
     
     ret
     
@@ -3117,6 +3296,9 @@ Room_2_Config
     DEFW 119      ;; screen memory offset
     DEFB _L,_O,_G,_A,_N,_S,__,_R,_U,_N,$ff        
     
+    
+    
+    
     DEFB 10    ; room ID   
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
@@ -3181,7 +3363,72 @@ Room_2_Config
     DEFW 467      ;; screen memory offset    
     DEFB _Z,_X,_8,_1,_R,_U,_L,_E,__,__,$ff   ; this has to be 10 characters
 
+
+    DEFB 11    ; room ID   
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 196   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
     
+    DEFB 8    ; character of platform 0 = disabled  (byte16)
+    DEFW 610  ; start of platform   17,18
+    DEFB 10    ; length   19
+    
+    DEFB 137    ; character of platform 0 = disabled  20
+    DEFW 454  ; start of platform  21,22
+    DEFB 2    ; length  23
+    
+    DEFB 128    ; character of platform 0 = disabled  24
+    DEFW 364  ; start of platform  25,26
+    DEFB 18    ; length             (byte 27)
+    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 13    ; length             (byte 27)        
+    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 64  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)    
+    ;;; tokens 2 bytes each
+    DEFW 583  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 584  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 585  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 691  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    
+    DEFW 206  ; enemySpriteZeroPos_ST 
+    DEFW 217  ; enemySpriteOnePos_ST  
+    DEFW 503  ; enemySpriteZeroPos_END
+    DEFW 481  ; enemySpriteOnePos_END 
+    DEFW 305  ; enemySpriteZeroPos_CUR
+    DEFW 349  ; enemySpriteOnePos_CUR 
+    DEFW 33    ; enemySpriteZeroPos_DIR
+    DEFW 33    ; enemySpriteOnePos_DIR 
+    DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteTwo
+    DEFW enemySpriteThree    
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1 
+    DEFB 5        ;; X position left most is zero
+    DEFB 3        ;; Y position bottom is 0
+    DEFW 467      ;; screen memory offset    
+    DEFB _X,_P,_E,_R,_I,_M,_E,_N,_T,__,$ff   ; this has to be 10 characters
+
+        
 
     
 VariablesEnd:   DEFB $80
