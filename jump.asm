@@ -38,7 +38,8 @@
 ;;    7) add disapearing platforms and to room config 
 ;;    8) add more platforms  ONGOING (now can have 5)
 ;;    9) optimise the player check collision with gold to use only outer blocks DONE
-;;   10) vertical moving enemys
+;;   10) vertical moving enemys DONE
+;;   11) add death scene
 
 ;some #defines for compatibility with other assemblers
 #define         DEFB .byte 
@@ -210,14 +211,14 @@ introWaitLoop
 	ld b,128
 introWaitLoop_1
     push bc	
-    ld de, 496    
-    ld hl, Display+1 
-    add hl, de        
-    ex de, hl
-    ld hl, playerSpriteLeftMove
-    ld c, 8
-    ld b, 8    
-    call drawSprite   
+        ld de, 496    
+        ld hl, Display+1 
+        add hl, de        
+        ex de, hl
+        ld hl, playerSpriteLeftMove
+        ld c, 8
+        ld b, 8    
+        call drawSprite   
     pop bc
 	djnz introWaitLoop_1
     jp read_start_key_1     ;; have to have 2 labels as not a call return
@@ -227,14 +228,14 @@ secondIntroWaitLoop
     ld b, 128
 introWaitLoop_2
     push bc
-    ld de, 496    
-    ld hl, Display+1 
-    add hl, de        
-    ex de, hl
-    ld hl, playerSpriteRightMove
-    ld c, 8
-    ld b, 8    
-    call drawSprite   
+        ld de, 496    
+        ld hl, Display+1 
+        add hl, de        
+        ex de, hl
+        ld hl, playerSpriteRightMove
+        ld c, 8
+        ld b, 8    
+        call drawSprite   
     pop bc
     djnz introWaitLoop_2
 
@@ -242,6 +243,12 @@ introWaitLoop_2
 	
 intro_title
 	call CLS  ; clears screen and sets the boarder
+    ld a, (gameOverRestartFlag)
+    cp 1
+    call z, gameOverDeathScene
+    
+    xor a
+    ld (gameOverRestartFlag), a
     
     ld a, (score_mem_tens)
     ld (last_score_mem_tens),a
@@ -1396,7 +1403,7 @@ CollisionWithEnemy  ; uh oh :--///
     
 gameOverRestart
     ld a, 1
-    ld (gameOverRestartFlag),a     
+    ld (gameOverRestartFlag),a        
     jp justPrintScore        
 foundGold_YES
     pop hl  ;; as we jumped out of the loop need to pop these
@@ -2045,7 +2052,54 @@ skipCalcualteRoomCon_ST
     ; add hl, de    
     ; ld (currentPlayerLocation), hl
     ret
+    
+gameOverDeathScene     
+    ld hl, playerSpriteDeathSequence
+    ld (deadPlayerSpritePointer), hl
+    ld b,19  ; we have 20 frames in the player sprite that died     
+laidToRestLoop
+    push bc	                  
+        ld de, 276    
+        ld hl, Display+1
+        add hl, de               
+        push hl
+        pop de
+        ld hl, (deadPlayerSpritePointer)
+        ld c, 8
+        ld b, 8    
+        call drawSprite             
+        
+        ld hl, (deadPlayerSpritePointer)   
+        ld de,64     ; 8 by 8 blocks
+        add hl, de
+        ld (deadPlayerSpritePointer), hl                
 
+          
+        ld b, 255
+delayLoopDeathScene            
+        push bc
+            ld b, 32
+delayLoopDeathScene_2
+
+            djnz delayLoopDeathScene_2        
+        pop bc
+        djnz delayLoopDeathScene
+    pop bc
+    djnz laidToRestLoop
+    
+
+        ld b, 255
+delayLoopDeathScene_3            
+        push bc
+            ld b, 128
+delayLoopDeathScene_4
+
+            djnz delayLoopDeathScene_4
+        pop bc
+        djnz delayLoopDeathScene_3
+    
+    call CLS
+    ret
 
 playerWonDoDanceMoves    
     call CLS
@@ -2366,6 +2420,114 @@ playerSpriteLeftMove
   DEFB	    $00, $00, $86, $84, $00, $00, $00, $00, $00, $00, $85, $00,
   DEFB  	$86, $00, $00, $00, $00, $00, $81, $00, $06, $00, $00, $00
 
+playerSpriteDeathSequence
+	  DEFB	    $00, $00, $00, $81, $80, $04, $00, $00, $00, $00, $00, $80,
+	  DEFB      $82, $07, $00, $00, $04, $00, $00, $85, $07, $00, $00, $87,
+	  DEFB	    $02, $03, $03, $80, $80, $03, $03, $01, $00, $00, $00, $80,
+	  DEFB	    $80, $00, $00, $00, $00, $00, $00, $07, $84, $00, $00, $00,
+	  DEFB	    $00, $00, $00, $05, $85, $00, $00, $00, $00, $00, $87, $05,
+	  DEFB		$85, $04, $00, $00, $00, $00, $00, $81, $80, $04, $00, $00,
+	  DEFB  	$00, $00, $00, $80, $82, $07, $00, $00, $00, $00, $00, $85,
+	  DEFB		$07, $00, $00, $00, $00, $87, $06, $80, $80, $86, $04, $00,
+	  DEFB		$02, $01, $00, $80, $80, $00, $02, $01, $00, $00, $00, $07,
+	  DEFB		$84, $00, $00, $00, $00, $00, $00, $05, $85, $00, $00, $00,
+	  DEFB		$00, $00, $87, $05, $85, $04, $00, $00, $00, $00, $00, $81,
+	  DEFB  	$80, $04, $00, $00, $00, $00, $00, $80, $82, $07, $00, $00,
+	  DEFB		$00, $00, $00, $85, $07, $00, $00, $00, $00, $00, $06, $80,
+	  DEFB		$80, $86, $00, $00, $00, $87, $01, $80, $80, $02, $04, $00,
+	  DEFB		$00, $00, $00, $07, $84, $00, $00, $00, $00, $00, $00, $05,
+	  DEFB		$85, $00, $00, $00, $00, $00, $87, $05, $85, $04, $00, $00,
+	  DEFB	    $00, $00, $00, $81, $80, $04, $00, $00, $00, $00, $00, $80,
+	  DEFB      $82, $07, $00, $00, $00, $00, $00, $85, $07, $00, $00, $00,
+	  DEFB	    $00, $00, $06, $80, $80, $86, $00, $00, $00, $00, $05, $80,
+	  DEFB	    $80, $85, $00, $00, $00, $00, $01, $07, $84, $02, $00, $00,
+	  DEFB	    $00, $00, $00, $05, $85, $00, $00, $00, $00, $00, $87, $05,
+	  DEFB		$85, $04, $00, $00, $00, $00, $00, $81, $80, $04, $00, $00,
+	  DEFB  	$00, $00, $00, $80, $82, $07, $00, $00, $00, $00, $00, $85,
+	  DEFB		$07, $00, $00, $00, $00, $00, $06, $80, $80, $86, $00, $00,
+	  DEFB		$00, $00, $05, $80, $80, $85, $00, $00, $00, $00, $01, $07,
+	  DEFB		$84, $02, $00, $00, $00, $00, $00, $05, $85, $00, $00, $00,
+	  DEFB		$00, $00, $87, $05, $85, $04, $00, $00, $00, $00, $00, $87,
+	  DEFB  	$83, $00, $00, $00, $00, $00, $00, $80, $07, $82, $00, $00,
+	  DEFB		$00, $00, $00, $84, $80, $01, $00, $00, $00, $00, $87, $81,
+	  DEFB		$82, $04, $00, $00, $00, $00, $05, $80, $80, $85, $00, $00,
+	  DEFB		$00, $00, $05, $80, $80, $85, $00, $00, $00, $00, $00, $05,
+	  DEFB		$85, $00, $00, $00, $00, $00, $00, $05, $85, $00, $00, $00,
+	  DEFB	    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $81,
+	  DEFB      $80, $04, $00, $00, $00, $00, $00, $80, $80, $07, $00, $00,
+	  DEFB	    $00, $00, $00, $85, $07, $00, $00, $00, $00, $00, $06, $80,
+	  DEFB	    $80, $86, $00, $00, $00, $00, $05, $80, $80, $85, $00, $00,
+	  DEFB	    $00, $00, $01, $07, $84, $02, $00, $00, $00, $00, $00, $05,
+	  DEFB		$85, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB  	$00, $00, $00, $87, $83, $00, $00, $00, $00, $00, $00, $80,
+	  DEFB		$07, $82, $00, $00, $00, $00, $00, $84, $80, $01, $00, $00,
+	  DEFB		$00, $00, $87, $81, $82, $04, $00, $00, $00, $00, $05, $80,
+	  DEFB		$80, $85, $00, $00, $00, $00, $05, $80, $80, $85, $00, $00,
+	  DEFB		$00, $00, $00, $05, $85, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB  	$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $81, $80, $04, $00, $00, $00, $00, $00, $80,
+	  DEFB		$80, $07, $00, $00, $00, $00, $00, $85, $07, $00, $00, $00,
+	  DEFB		$00, $00, $06, $80, $80, $86, $00, $00, $00, $00, $05, $80,
+	  DEFB		$80, $85, $00, $00, $00, $00, $01, $07, $84, $02, $00, $00,
+	  DEFB	    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB      $00, $00, $00, $00, $00, $00, $00, $87, $83, $00, $00, $00,
+	  DEFB	    $00, $00, $00, $80, $07, $82, $00, $00, $00, $00, $00, $84,
+	  DEFB	    $80, $01, $00, $00, $00, $00, $87, $81, $82, $04, $00, $00,
+	  DEFB	    $00, $00, $05, $80, $80, $85, $00, $00, $00, $00, $05, $80,
+	  DEFB		$80, $85, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB  	$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $81, $80, $04, $00, $00,
+	  DEFB		$00, $00, $00, $80, $80, $07, $00, $00, $00, $00, $00, $85,
+	  DEFB		$07, $00, $00, $00, $00, $00, $06, $80, $80, $86, $00, $00,
+	  DEFB		$00, $00, $05, $80, $80, $85, $00, $00, $00, $00, $00, $00,
+	  DEFB  	$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $87,
+	  DEFB		$83, $00, $00, $00, $00, $00, $00, $80, $07, $82, $00, $00,
+	  DEFB		$00, $00, $00, $84, $80, $01, $00, $00, $00, $00, $87, $81,
+	  DEFB		$82, $04, $00, $00, $00, $00, $05, $80, $80, $85, $00, $00,
+	  DEFB	    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB      $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB	    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $81,
+	  DEFB	    $80, $04, $00, $00, $00, $00, $00, $80, $80, $07, $00, $00,
+	  DEFB	    $00, $00, $00, $85, $07, $00, $00, $00, $00, $00, $06, $80,
+	  DEFB		$80, $86, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB  	$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $87, $83, $00, $00, $00, $00, $00, $00, $80,
+	  DEFB		$07, $82, $00, $00, $00, $00, $00, $84, $80, $01, $00, $00,
+	  DEFB		$00, $00, $87, $81, $82, $04, $00, $00, $00, $00, $00, $00,
+	  DEFB  	$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $81, $80, $04, $00, $00, $00, $00, $00, $80,
+	  DEFB		$80, $07, $00, $00, $00, $00, $00, $85, $07, $00, $00, $00,
+	  DEFB	    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB      $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB	    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB	    $00, $00, $00, $00, $00, $00, $00, $87, $83, $00, $00, $00,
+	  DEFB	    $00, $00, $00, $80, $07, $82, $00, $00, $00, $00, $00, $84,
+	  DEFB		$80, $01, $00, $00, $07, $03, $04, $84, $07, $85, $03, $86,
+	  DEFB  	$05, $87, $01, $85, $05, $85, $00, $85, $07, $86, $00, $85,
+	  DEFB		$05, $85, $03, $01, $05, $00, $05, $81, $82, $85, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $07, $03, $04, $84,
+	  DEFB  	$07, $85, $03, $86, $05, $87, $01, $85, $05, $85, $00, $85,
+	  DEFB		$07, $86, $00, $85, $05, $85, $03, $01, $05, $00, $05, $81,
+	  DEFB		$82, $85, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB	    $07, $03, $04, $84, $07, $85, $03, $86, $05, $87, $01, $85,
+	  DEFB      $05, $85, $00, $85, $07, $86, $00, $85, $05, $85, $03, $01,
+	  DEFB	    $05, $00, $05, $81, $82, $85, $00, $00, $00, $00, $00, $00,
+	  DEFB	    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB	    $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $07, $03, $04, $84, $07, $85, $03, $86,
+	  DEFB  	$05, $87, $01, $85, $05, $85, $00, $85, $07, $86, $00, $85,
+	  DEFB		$05, $85, $03, $01, $05, $00, $05, $81, $82, $85, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
+	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00
     
    
 ; used to clear current location before move    
@@ -2438,7 +2600,8 @@ enemySprite4by4Blank
     DEFB 0, 0, 0 ,0, 0, 0
     DEFB 0, 0, 0 ,0, 0, 0
     DEFB 0, 0, 0 ,0, 0, 0 
-
+deadPlayerSpritePointer
+    DEFW 0
 
 enemySpriteZero
 	DEFB $07, $03, $03, $84, $05, $00, $00, $85, $05, $00, $00, $85,
@@ -2532,7 +2695,7 @@ high_Score_txt
 credits_and_version_1
 	DEFB __,_B,_Y,__,_A,__,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,__, _2,_0,_2,_4,$ff
 credits_and_version_2
-	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_1,$ff    
+	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_2,$ff    
 credits_and_version_3
 	DEFB __,__,__,_Y,_O,_U,_T,_U,_B,_E,_CL, _B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff       
     
@@ -2682,18 +2845,18 @@ startOfRoom1Treasure
     DEFB 1    ; is the trreasure enabled or not - used when 
     ;; enemy definition gets loaded into these when room entered
 firstEnemyAddress      ;;  36 bytes   
-    DEFW 640  ; enemySpriteZeroPos_ST 
-    DEFW 113  ; enemySpriteOnePos_ST  
-    DEFW 647  ; enemySpriteZeroPos_END
+    DEFW 270  ; enemySpriteZeroPos_ST 
+    DEFW 109  ; enemySpriteOnePos_ST  
+    DEFW 600  ; enemySpriteZeroPos_END
     DEFW 126  ; enemySpriteOnePos_END 
-    DEFW 640  ; enemySpriteZeroPos_CUR
+    DEFW 435  ; enemySpriteZeroPos_CUR
     DEFW 113  ; enemySpriteOnePos_CUR 
-    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 33    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 0; slow rate = 1
     DEFB 1    ; enemy 1 full rate enemy = 0; slow  rate = 1    
-    DEFW enemySpriteSix
-    DEFW enemySpriteTwo
+    DEFW enemySpriteZero
+    DEFW enemySpriteOne
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1    
 offsetToPlayerXY
@@ -3434,3 +3597,4 @@ Room_2_Config
 VariablesEnd:   DEFB $80
 BasicEnd: 
 #END
+
