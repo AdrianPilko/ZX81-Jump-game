@@ -39,7 +39,7 @@
 ;;    8) add more platforms  ONGOING (now can have 5)
 ;;    9) optimise the player check collision with gold to use only outer blocks DONE
 ;;   10) vertical moving enemys DONE
-;;   11) add death scene
+;;   11) add death scene DONE
 
 ;some #defines for compatibility with other assemblers
 #define         DEFB .byte 
@@ -52,8 +52,8 @@ CLS				EQU $0A2A
 ;;#define DEBUG_SPRITE_ADDRESS 1
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
-#define DEBUG_START_IN_ROOM_X   1
-#define DEBUG_ROOM_TO_START_IN 10
+;#define DEBUG_START_IN_ROOM_X   1
+;#define DEBUG_ROOM_TO_START_IN 11
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -81,7 +81,7 @@ CLS				EQU $0A2A
 #define ENEMY_CHAR_1 133
 #define ENEMY_CHAR_2 $5
 
-#define LAST_ROOM 11
+#define LAST_ROOM 12
 
 ;70
 #define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config    
@@ -331,6 +331,7 @@ initVariables
     ld (score_mem_tens),a
 	ld (score_mem_hund),a    
     ld (currentRoom), a
+    ld (currentRoomDisplay), a
     ld (groundPlatFlag), a  ; set to zero as we start player above
     ld (justJumpFlag),a
     ld a, 1
@@ -365,7 +366,9 @@ initVariables
 
 #ifdef DEBUG_START_IN_ROOM_X    
     ld a, DEBUG_ROOM_TO_START_IN
-    ld (currentRoom), a
+    ld (currentRoom), a    
+    daa
+    ld (currentRoomDisplay), a
 #endif    
 
     
@@ -822,7 +825,8 @@ executeMoveRoom
     ld a, (currentRoom) 
     inc a
     ld (currentRoom), a
-    
+    daa
+    ld (currentRoomDisplay), a
     call initialiseEnemysForRoom
     
     ret 
@@ -849,6 +853,8 @@ drawRoom
 #ifdef DEBUG_START_IN_ROOM_X    
     ld a, DEBUG_ROOM_TO_START_IN
     ld (currentRoom), a
+    daa
+    ld (currentRoomDisplay), a    
 #endif    
 
     call CLS
@@ -877,8 +883,7 @@ skipCalcualteRoomCOnfig
     ld bc, 2
     call printstring
     
-    ld a, (currentRoom)
-    daa
+    ld a, (currentRoomDisplay)
     ld de, 11
     call print_number8bits
     
@@ -1840,6 +1845,8 @@ initialiseEnemysForRoom
 #ifdef DEBUG_START_IN_ROOM_X    
     ld a, DEBUG_ROOM_TO_START_IN
     ld (currentRoom), a
+    daa
+    ld (currentRoomDisplay), a        
 #endif    
     
     
@@ -2620,7 +2627,6 @@ enemySpriteOne
 	DEFB $00, $85, $05, $00, $83, $06, $86, $83, $03, $86, $06, $03,
 	DEFB $00, $85, $05, $00
     
-    
 enemySpriteTwo
 	DEFB $03, $84, $07, $03, $00, $85, $05, $00, $00, $85, $05, $00,
 	DEFB $83, $81, $82, $83, $83, $83, $83, $83, $00, $85, $05, $00,
@@ -2657,7 +2663,13 @@ enemySpriteSix
 	DEFB $00, $81, $82, $00, $00, $82, $81, $00, $00, $82, $81, $00,
 	DEFB $00, $87, $04, $00, $00, $81, $82, $00, $87, $82, $81, $04,
 	DEFB $85, $81, $82, $05
-    
+enemySpriteSeven    
+	DEFB $05, $85, $80, $00, $07, $83, $82, $83, $05, $85, $80, $00,
+	DEFB $00, $85, $85, $00, $04, $85, $80, $00, $82, $83, $82, $06,
+	DEFB $05, $85, $80, $00, $01, $81, $85, $04, $00, $85, $80, $00,
+	DEFB $05, $83, $82, $83, $07, $85, $80, $00, $05, $85, $85, $00,
+	DEFB $00, $85, $80, $00, $05, $83, $82, $83, $07, $85, $80, $00,
+	DEFB $05, $81, $85, $04    
 
 gameTime_Seconds
     DEFB 0 
@@ -2697,7 +2709,7 @@ high_Score_txt
 credits_and_version_1
 	DEFB __,_B,_Y,__,_A,__,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,__, _2,_0,_2,_4,$ff
 credits_and_version_2
-	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_2,$ff    
+	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_3,$ff    
 credits_and_version_3
 	DEFB __,__,__,_Y,_O,_U,_T,_U,_B,_E,_CL, _B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff       
     
@@ -2725,6 +2737,8 @@ DEBUG_DUMMY_VAR_1
     DEFW 0,0,0,0,0
 currentRoom
     DEFB 0
+currentRoomDisplay
+    DEFB 0    
 DEBUG_DUMMY_VAR_2 
     DEFW 0,0,0,0,0
 dancePos
@@ -3532,6 +3546,71 @@ Room_2_Config
     DEFB 11    ; room ID   
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 295   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    
+    DEFB 6    ; character of platform 0 = disabled  (byte16)
+    DEFW 529  ; start of platform   17,18
+    DEFB 7    ; length   19
+    
+    DEFB 6    ; character of platform 0 = disabled  20
+    DEFW 540  ; start of platform  21,22
+    DEFB 10    ; length  23
+    
+    DEFB 6    ; character of platform 0 = disabled  24
+    DEFW 554  ; start of platform  25,26
+    DEFB 6    ; length             (byte 27)
+    
+    DEFB 6    ; 1 = enabled 0 = disabled  
+    DEFW 661  ; start of platform  25,26
+    DEFB 7    ; length             (byte 27)        
+    
+    DEFB 6    ; 1 = enabled 0 = disabled  
+    DEFW 672  ; start of platform  25,26
+    DEFB 10    ; length             (byte 27)    
+    ;;; tokens 2 bytes each
+    DEFW 277  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 283  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 290  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 291  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    
+    DEFW 206  ; enemySpriteZeroPos_ST 
+    DEFW 220  ; enemySpriteOnePos_ST  
+    DEFW 602  ; enemySpriteZeroPos_END
+    DEFW 616  ; enemySpriteOnePos_END 
+    DEFW 569  ; enemySpriteZeroPos_CUR
+    DEFW 253  ; enemySpriteOnePos_CUR 
+    DEFW 33    ; enemySpriteZeroPos_DIR
+    DEFW 33    ; enemySpriteOnePos_DIR 
+    DEFB 0    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteSeven
+    DEFW enemySpriteSeven    
+    DEFB  1  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  1  ; enemy one orientation horizontal = 0 vertical = 1 
+    DEFB 2        ;; X position left most is zero
+    DEFB 14        ;; Y position bottom is 0
+    DEFW 101      ;; screen memory offset    
+    DEFB _T,_H,_E,__,_B,_E,_L,_L,_S,__,$ff   ; this has to be 10 characters
+
+
+    DEFB 12    ; room ID   
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
     DEFW 196   ; offset from DF_CC to top of door
     DEFB 8    ; 9 blocks high
     DEFB 1    ; ID of next room from this one
@@ -3591,7 +3670,7 @@ Room_2_Config
     DEFB 5        ;; X position left most is zero
     DEFB 3        ;; Y position bottom is 0
     DEFW 467      ;; screen memory offset    
-    DEFB _Z,_X,_8,_1,_R,_U,_L,_E,__,__,$ff   ; this has to be 10 characters
+    DEFB _Z,_X,_8,_1,_R,_U,_L,_E,_S,__,$ff   ; this has to be 10 characters
         
 
     
