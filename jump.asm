@@ -52,8 +52,8 @@ CLS				EQU $0A2A
 ;;#define DEBUG_SPRITE_ADDRESS 1
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
-;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 11
+#define DEBUG_START_IN_ROOM_X   1
+#define DEBUG_ROOM_TO_START_IN 10
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -81,7 +81,7 @@ CLS				EQU $0A2A
 #define ENEMY_CHAR_1 133
 #define ENEMY_CHAR_2 $5
 
-#define LAST_ROOM 10
+#define LAST_ROOM 11
 
 ;70
 #define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config    
@@ -2420,6 +2420,8 @@ playerSpriteLeftMove
   DEFB	    $00, $00, $86, $84, $00, $00, $00, $00, $00, $00, $85, $00,
   DEFB  	$86, $00, $00, $00, $00, $00, $81, $00, $06, $00, $00, $00
 
+;; this uses 1024 bytes of memory but given we have a hughe 16Kb there should be room 
+;; for more rooms
 playerSpriteDeathSequence
 	  DEFB	    $00, $00, $00, $81, $80, $04, $00, $00, $00, $00, $00, $80,
 	  DEFB      $82, $07, $00, $00, $04, $00, $00, $85, $07, $00, $00, $87,
@@ -3498,33 +3500,33 @@ Room_2_Config
     DEFW 64  ; start of platform  25,26
     DEFB 2    ; length             (byte 27)    
     ;;; tokens 2 bytes each
-    DEFW 583  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
-    DEFB 1    ; is the trreasure enabled or not - used when 
-    DEFW 584  ; treasure token offset from DF_CC
+    DEFW 584  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFB 1    ; is the trreasure enabled or not - used when 
     DEFW 585  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
-    DEFW 691  ; treasure token offset from DF_CC
+    DEFW 586  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 670  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
     
-    DEFW 640  ; enemySpriteZeroPos_ST 
-    DEFW 113  ; enemySpriteOnePos_ST  
-    DEFW 647  ; enemySpriteZeroPos_END
-    DEFW 122  ; enemySpriteOnePos_END 
-    DEFW 643  ; enemySpriteZeroPos_CUR
-    DEFW 115  ; enemySpriteOnePos_CUR 
-    DEFW 1    ; enemySpriteZeroPos_DIR
-    DEFW 1    ; enemySpriteOnePos_DIR 
+    DEFW 176  ; enemySpriteZeroPos_ST 
+    DEFW 217  ; enemySpriteOnePos_ST  
+    DEFW 506  ; enemySpriteZeroPos_END
+    DEFW 481  ; enemySpriteOnePos_END 
+    DEFW 308  ; enemySpriteZeroPos_CUR
+    DEFW 349  ; enemySpriteOnePos_CUR 
+    DEFW 33    ; enemySpriteZeroPos_DIR
+    DEFW 33    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
-    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
-    DEFW enemySpriteTwo
+    DEFB 1    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteThree
     DEFW enemySpriteThree    
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1 
     DEFB 5        ;; X position left most is zero
-    DEFB 3        ;; Y position bottom is 0
-    DEFW 467      ;; screen memory offset    
-    DEFB _Z,_X,_8,_1,_R,_U,_L,_E,__,__,$ff   ; this has to be 10 characters
+    DEFB 14        ;; Y position bottom is 0
+    DEFW 104      ;; screen memory offset    
+    DEFB _X,_P,_E,_R,_I,_M,_E,_N,_T,__,$ff   ; this has to be 10 characters
 
 
     DEFB 11    ; room ID   
@@ -3572,14 +3574,14 @@ Room_2_Config
     DEFW 691  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
     
-    DEFW 206  ; enemySpriteZeroPos_ST 
-    DEFW 217  ; enemySpriteOnePos_ST  
-    DEFW 503  ; enemySpriteZeroPos_END
-    DEFW 481  ; enemySpriteOnePos_END 
-    DEFW 305  ; enemySpriteZeroPos_CUR
-    DEFW 349  ; enemySpriteOnePos_CUR 
-    DEFW 33    ; enemySpriteZeroPos_DIR
-    DEFW 33    ; enemySpriteOnePos_DIR 
+    DEFW 640  ; enemySpriteZeroPos_ST 
+    DEFW 113  ; enemySpriteOnePos_ST  
+    DEFW 647  ; enemySpriteZeroPos_END
+    DEFW 122  ; enemySpriteOnePos_END 
+    DEFW 643  ; enemySpriteZeroPos_CUR
+    DEFW 115  ; enemySpriteOnePos_CUR 
+    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
     DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
     DEFW enemySpriteTwo
@@ -3589,8 +3591,7 @@ Room_2_Config
     DEFB 5        ;; X position left most is zero
     DEFB 3        ;; Y position bottom is 0
     DEFW 467      ;; screen memory offset    
-    DEFB _X,_P,_E,_R,_I,_M,_E,_N,_T,__,$ff   ; this has to be 10 characters
-
+    DEFB _Z,_X,_8,_1,_R,_U,_L,_E,__,__,$ff   ; this has to be 10 characters
         
 
     
