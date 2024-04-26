@@ -52,8 +52,8 @@ CLS				EQU $0A2A
 ;;#define DEBUG_SPRITE_ADDRESS 1
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
-#define DEBUG_START_IN_ROOM_X   1
-#define DEBUG_ROOM_TO_START_IN 11
+;#define DEBUG_START_IN_ROOM_X   1
+;#define DEBUG_ROOM_TO_START_IN 11
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -2929,7 +2929,7 @@ Room_2_Config
     DEFB 1    ; room ID
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
-    DEFW 526   ; offset from DF_CC to top of door
+    DEFW 297   ; offset from DF_CC to top of door
     DEFB 8    ; 9 blocks high
     DEFB 1    ; ID of next room from this one
     DEFB 0    ; Door orientation east=1  0= door disabled
@@ -2963,13 +2963,13 @@ Room_2_Config
     DEFB 2    ; length             (byte 27)        
     ;;; tokens 2 bytes each
     
-    DEFW 168  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 388  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFB 1    ; is the trreasure enabled or not - used when 
-    DEFW 169  ; treasure token offset from DF_CC
+    DEFW 389  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
-    DEFW 170  ; treasure token offset from DF_CC
+    DEFW 421  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
-    DEFW 171  ; treasure token offset from DF_CC
+    DEFW 422  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
      
     DEFW 120  ; enemySpriteZeroPos_ST 
