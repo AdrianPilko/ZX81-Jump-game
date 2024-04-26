@@ -52,8 +52,8 @@ CLS				EQU $0A2A
 ;;#define DEBUG_SPRITE_ADDRESS 1
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
-;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 11
+#define DEBUG_START_IN_ROOM_X   1
+#define DEBUG_ROOM_TO_START_IN 11
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -81,7 +81,7 @@ CLS				EQU $0A2A
 #define ENEMY_CHAR_1 133
 #define ENEMY_CHAR_2 $5
 
-#define LAST_ROOM 12
+#define LAST_ROOM 13
 
 ;70
 #define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config    
@@ -511,9 +511,14 @@ skipsetBlankSprite
 moveLeft         
     ld a, (playerXPos)
     dec a
-    cp 0
+    cp 0      ;;; this prevents the player moving past edge, but if it's a door
+              ;; trigger seperate code to move to new room
+    push af   ;; preserve flags (as well as register a)
+    call z, checkAtDoorLeft
+    pop af    ;; restore flags (as well as register a)
     jp z, updateRestOfScreen   
     ld (playerXPos), a
+    
         
     ld hl, (currentPlayerLocation)
     ld (previousPlayerLocation), hl
@@ -549,7 +554,6 @@ moveRight
     inc a
     cp 24          ;;; this prevents the player moving past edge, but if it's a door
                    ;; trigger seperate code to move to new room
-    ;jp z, updateRestOfScreen   
     push af   ;; preserve flags (as well as register a)
     call z, checkAtDoorRight    
     pop af    ;; restore flags (as well as register a)
@@ -797,9 +801,9 @@ checkAtDoorRight
     add hl, de
     ld a, (hl)
     cp 0
-    jp z, setMoveRoomFlag
-    jp noMoveRoomFlag
-setMoveRoomFlag    
+    jp z, setMoveRoomFlagRight
+    jp noMoveRoomFlagRight
+setMoveRoomFlagRight    
     ld a, 1
     ld (moveRoomFlag), a
 
@@ -807,8 +811,36 @@ setMoveRoomFlag
     ;ld bc, 91
     ;call printstring
     
-noMoveRoomFlag
+noMoveRoomFlagRight
     ret
+    
+    
+    
+;;; set a move room flag is attempted to move to a door on right (will need checkAtDoorLeft later)
+;; only check if player is at edge from moveRight code
+checkAtDoorLeft
+    ;; ok doors are always on edge of room so use currentPlayerLocation
+    ;; to check if the wall next to us is blank
+    ld hl, (currentPlayerLocation)  ;; remember this is the top right position of 8*8 player
+    ld de, -1   ; add 9 to currentPlayerLocation giving the boarder 
+    add hl, de
+    ld a, (hl)
+    cp 0
+    jp z, setMoveRoomFlagLeft
+    jp noMoveRoomFlagLeft
+setMoveRoomFlagLeft    
+    ld a, 1
+    ld (moveRoomFlag), a
+
+    ;ld de, moveRoomDebugFlagText
+    ;ld bc, 91
+    ;call printstring
+    
+noMoveRoomFlagLeft
+    ret    
+    
+    
+    
     
 executeMoveRoom
     xor a
@@ -2670,7 +2702,14 @@ enemySpriteSeven
 	DEFB $05, $83, $82, $83, $07, $85, $80, $00, $05, $85, $85, $00,
 	DEFB $00, $85, $80, $00, $05, $83, $82, $83, $07, $85, $80, $00,
 	DEFB $05, $81, $85, $04    
-
+enemySpriteEight	
+	DEFB $00, $81, $82, $00, $81, $86, $06, $82, $84, $06, $86, $07,
+	DEFB $00, $84, $07, $00, $00, $81, $82, $00, $81, $01, $02, $82,
+	DEFB $84, $04, $87, $07, $00, $84, $07, $00, $00, $06, $86, $00,
+	DEFB $06, $00, $00, $86, $86, $00, $00, $06, $00, $86, $06, $00,
+	DEFB $00, $06, $86, $00, $06, $87, $00, $86, $86, $00, $01, $06,
+	DEFB $00, $86, $06, $00
+    
 gameTime_Seconds
     DEFB 0 
 gameTime_Minutes
@@ -3546,6 +3585,72 @@ Room_2_Config
     DEFB 11    ; room ID   
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 264   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    
+    DEFB 6    ; character of platform 0 = disabled  (byte16)
+    DEFW 529  ; start of platform   17,18
+    DEFB 7    ; length   19
+    
+    DEFB 6    ; character of platform 0 = disabled  20
+    DEFW 540  ; start of platform  21,22
+    DEFB 10    ; length  23
+    
+    DEFB 6    ; character of platform 0 = disabled  24
+    DEFW 554  ; start of platform  25,26
+    DEFB 6    ; length             (byte 27)
+    
+    DEFB 6    ; 1 = enabled 0 = disabled  
+    DEFW 661  ; start of platform  25,26
+    DEFB 7    ; length             (byte 27)        
+    
+    DEFB 6    ; 1 = enabled 0 = disabled  
+    DEFW 672  ; start of platform  25,26
+    DEFB 10    ; length             (byte 27)    
+    ;;; tokens 2 bytes each
+    DEFW 277  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 283  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 290  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 291  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    
+    DEFW 206  ; enemySpriteZeroPos_ST 
+    DEFW 220  ; enemySpriteOnePos_ST  
+    DEFW 602  ; enemySpriteZeroPos_END
+    DEFW 616  ; enemySpriteOnePos_END 
+    DEFW 569  ; enemySpriteZeroPos_CUR
+    DEFW 253  ; enemySpriteOnePos_CUR 
+    DEFW 33    ; enemySpriteZeroPos_DIR
+    DEFW 33    ; enemySpriteOnePos_DIR 
+    DEFB 0    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFW enemySpriteEight
+    DEFW enemySpriteEight   
+    DEFB  1  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  1  ; enemy one orientation horizontal = 0 vertical = 1 
+    DEFB 2        ;; X position left most is zero
+    DEFB 14        ;; Y position bottom is 0
+    DEFW 101      ;; screen memory offset    
+    DEFB _O,_N,__,_L,_E,_F,_T,__,__,__,$ff   ; this has to be 10 characters
+
+
+
+    DEFB 12    ; room ID   
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
     DEFW 295   ; offset from DF_CC to top of door
     DEFB 8    ; 9 blocks high
     DEFB 1    ; ID of next room from this one
@@ -3608,7 +3713,7 @@ Room_2_Config
     DEFB _T,_H,_E,__,_B,_E,_L,_L,_S,__,$ff   ; this has to be 10 characters
 
 
-    DEFB 12    ; room ID   
+    DEFB 13    ; room ID   
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
     DEFW 196   ; offset from DF_CC to top of door
