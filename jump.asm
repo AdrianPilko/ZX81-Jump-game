@@ -621,6 +621,11 @@ moveRight
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 0, a						    ; SPACE
     jp z, doJump
+
+    ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
+    in a, (KEYBOARD_READ_PORT)					; read from io port		
+    bit 1, a						    ; Z
+    jp z, doJump         
     
     jp updateRestOfScreen 
 spriteNextRight    
