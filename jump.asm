@@ -1314,29 +1314,35 @@ drawSprite_OR_ColLoop
 ;;;; TODO check only the outer edges of player
 
 checkCollisionAndGoldCollect 
+    push hl
+    push bc
+    call checkForGold
+    pop bc
+    pop hl
+    
+    push hl
+    push bc    
+   ; call checkForCollision
+    pop bc
+    pop hl    
+    ret 
+    
+    
+    
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; checkForGold 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; checkForGold
+checkForGold
     xor a
     ld (goldFoundTemp), a
     ld (goldFoundCount), a     
-    ld (hitEnemyRestartRoomFlag), a 
-    
+   
     push bc          
-    ld b, 5      ; check middle part of player top row
+    ld b, 8      ; check whole player part of player top row
         push hl
-        inc hl
-GoldCollectColLoop_1      
-
-#ifdef DEBUG_COLLISION_DETECT_1
-    ;print a block to work out where hl is before first check
-    ;; even in debug mode comment in and out as needed or player falls through floor
-    push hl
-    push de
-    ld a, 136
-    ld (hl), a    
-    call print_number8bits
-    pop de
-    pop hl
-#endif   
- 
+GoldCollectColLoop_1  
+            
+           ; ld (hl), 8        
+            
             ld a, (hl)
             inc hl
             cp NORMAL_TREASURE_CHARACTER
@@ -1348,30 +1354,26 @@ incOnlyfoundGold_YES              ;; keep a count of gold found
             ld a, (goldFoundTemp)
             inc a
             ld (goldFoundTemp), a
-noGoldFoundBypass                
-            cp 132
-            jp z, CollisionWithEnemy    
-            cp 133
-            jp z, CollisionWithEnemy        
-            cp 134
-            jp z, CollisionWithEnemy            
-            cp 5
-            jp z, CollisionWithEnemy            
+noGoldFoundBypass                         
             djnz GoldCollectColLoop_1          
-            ld a, (goldFoundTemp)
-            cp 0
-            jp nz, foundGold_YES
         pop hl
     pop bc        
-    
+
+    push hl
+
+    ld de, 33             ;; move next write position to next row        
+    add hl, de
 checkAndGoldCollectRowLoop
-    push bc          
-    ld b, 2      ; only check left and right edges
+
+       push bc          
+         ld b, 2      ; only check left and right edges
          push hl         
-GoldCollectColLoop       
+GoldCollectColLoop    
+            ;ld (hl), 8    
             ld a, (hl)
             ld de, 7
-            add hl, de
+            add hl, de       
+            
             cp NORMAL_TREASURE_CHARACTER
             jr z, incOnlyfoundGold_YES_2
             cp INVERSE_TREASURE_CHARACTER
@@ -1381,52 +1383,26 @@ incOnlyfoundGold_YES_2              ;; keep a count of gold found
             ld a, (goldFoundTemp)
             inc a
             ld (goldFoundTemp), a
-noGoldFoundBypass_2  
-            cp 132    ;;; 132 happens to be part of arrow head
-            jp z, CollisionWithEnemy    
-            cp 133
-            jp z, CollisionWithEnemy
-            cp 134
-            jp z, CollisionWithEnemy            
-            cp 5
-            jp z, CollisionWithEnemy            
+noGoldFoundBypass_2           
             djnz GoldCollectColLoop
         pop hl
         ld de, 33             ;; move next write position to next row        
         add hl, de
-    pop bc
-    djnz checkAndGoldCollectRowLoop    
-  
-   
-   ;;; check YSpeed , if > 0 then wipe the line below and don't check for enemy or gold
-   ;; YSpeed is only ever non zero when player moving up, not when moving down
-   ld a, (YSpeed)
-   cp 5 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
-   jp z, blankBottomRowInCheckCollision   
-   cp 4 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
-   jp z, blankBottomRowInCheckCollision   
-   cp 3 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
-   jp z, blankBottomRowInCheckCollision   
-   cp 2 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
-   jp z, blankBottomRowInCheckCollision   
-   cp 1
-   jp nz, skipBottomRowCollisionDet
-   ;cp 0
-   ;jp nz, skipBottomRowCollisionDet
-   
-   
+      pop bc
+      djnz checkAndGoldCollectRowLoop       
 
-   
-   ld de, 33             
+   pop hl
+   ld de, 297
    add hl, de
    
    push bc          
-        ld b, 4      ; check middle part of player bottom row
+        ld b, 8      ; check whole part of playerbottom row
         push hl
-        inc hl 
-        inc hl
 GoldCollectColLoop_2       
-            ld a, (hl)
+            
+            ;ld (hl), 8        
+            
+            ld a, (hl)            
             inc hl
             cp INVERSE_TREASURE_CHARACTER
             jr z, incOnlyfoundGold_YES_3
@@ -1437,94 +1413,19 @@ incOnlyfoundGold_YES_3              ;; keep a count of gold found
             ld a, (goldFoundTemp)
             inc a
             ld (goldFoundTemp), a
-noGoldFoundBypass_3                
-            cp 133
-            jr z, CollisionWithEnemy
-            cp 134
-            jr z, CollisionWithEnemy            
-            cp 5
-            jr z, CollisionWithEnemy            
+noGoldFoundBypass_3                        
             djnz GoldCollectColLoop_2          
-            ld a, (goldFoundTemp)
-            cp 0
-            jp nz, foundGold_YES
         pop hl
     pop bc        
-
-skipBottomRowCollisionDet
+  
     ld a, (goldFoundTemp)
     cp 0
-    jp nz, prefoundGold_YES
-    jp justPrintScore       
+    jp nz, foundGold_YES
+    jp justPrintScore_GC     
+    
+   
 
-blankBottomRowInCheckCollision
-;;; dont do it yet just check
-
-#ifdef DEBUG_COLLISION_DETECT_2
-    ;print a block to work out where hl is now after previous loop
-    ;; even in debug mode comment in and out as needed or player falls through floor
-    push hl
-    push de
-    ld a, 136
-    ld (hl), a
-    
-    ;;also  print YSpeed
-    ld a, (YSpeed)
-    ld de, 68
-    call print_number8bits
-    pop de
-    pop hl
-#endif   
-    ;; only blank middle 4 blocks
-    ld de, 34
-    add hl, de
-    ld a, 0        
-    ld (hl), a
-    inc hl
-    ld (hl), a
-    inc hl
-    ld (hl), a
-    inc hl
-    ld (hl), a
-    inc hl
-    ld (hl), a
-    
-    ld a, (goldFoundTemp)
-    cp 0
-    jp nz, prefoundGold_YES
-    jp justPrintScore     
-    
-prefoundGold_YES
-    push bc
-    push hl
-    jp foundGold_YES    
-
-
-    
-
-CollisionWithEnemy  ; uh oh :--///
-    pop hl  ;; as we jumped out of the loop need to pop these
-    pop bc  ;; as we jumped out of the loop need to pop these
-    ld a, 1
-    ld (hitEnemyRestartRoomFlag), a 
-    
-    ld a, (playerLives)
-    dec a
-    cp 0
-    jp z, gameOverRestart   
-    
-    ld (playerLives), a
-    
-    jp justPrintScore
-    
-gameOverRestart
-    ld a, 1
-    ld (gameOverRestartFlag),a        
-    jp justPrintScore        
 foundGold_YES
-    pop hl  ;; as we jumped out of the loop need to pop these
-    pop bc  ;; as we jumped out of the loop need to pop these
-    
     ld a, (goldFoundTemp)
     ld b, a
 incGoldScoreLoop    
@@ -1540,7 +1441,7 @@ incGoldScoreLoop
     
     ld a, (goldFoundCount)
     cp 0
-    jp z, justPrintScore
+    jp z, justPrintScore_GC
     ld b, a
 
     ld a,(score_mem_tens)				; add one to score, scoring is binary coded decimal (BCD)
@@ -1560,7 +1461,7 @@ addOneToHund
 skipAddHund	
     pop bc 
     djnz incGoldScoreLoop
-justPrintScore
+justPrintScore_GC
     ld bc, 23
     ld de, score_mem_tens
     call printNumber
@@ -1569,6 +1470,171 @@ justPrintScore
     call printNumber    
     
     ret
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; checkForCollision with ememy
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; checkForCollision with ememy
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; checkForCollision with ememy
+checkForCollision   
+    xor a
+    ld (hitEnemyRestartRoomFlag), a 
+    
+    push bc          
+    ld b, 5      ; check middle part of player top row
+        push hl
+        inc hl
+GoldCollectColLoop_1_CC      
+
+#ifdef DEBUG_COLLISION_DETECT_1
+    ;print a block to work out where hl is before first check
+    ;; even in debug mode comment in and out as needed or player falls through floor
+    push hl
+    push de
+    ld a, 136
+    ld (hl), a    
+    call print_number8bits
+    pop de
+    pop hl
+#endif   
+            ld a, (hl)
+            inc hl            
+            cp 132
+            jp z, CollisionWithEnemy_CC    
+            cp 133
+            jp z, CollisionWithEnemy_CC        
+            cp 134
+            jp z, CollisionWithEnemy_CC            
+            cp 5
+            jp z, CollisionWithEnemy_CC            
+            djnz GoldCollectColLoop_1_CC          
+        pop hl
+    pop bc        
+    
+checkAndGoldCollectRowLoop_CC
+    push bc          
+    ld b, 2      ; only check left and right edges
+         push hl         
+GoldCollectColLoop_CC       
+            ld a, (hl)
+            ld de, 7
+            add hl, de 
+            cp 132    ;;; 132 happens to be part of arrow head
+            jp z, CollisionWithEnemy_CC    
+            cp 133
+            jp z, CollisionWithEnemy_CC
+            cp 134
+            jp z, CollisionWithEnemy_CC            
+            cp 5
+            jp z, CollisionWithEnemy_CC            
+            djnz GoldCollectColLoop_CC
+        pop hl
+        ld de, 33             ;; move next write position to next row        
+        add hl, de
+    pop bc
+    djnz checkAndGoldCollectRowLoop_CC    
+  
+   
+   ;;; check YSpeed , if > 0 then wipe the line below and don't check for enemy or gold
+   ;; YSpeed is only ever non zero when player moving up, not when moving down
+   ld a, (YSpeed)
+   cp 5 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
+   jp z, blankBotInCheckCollision_CC   
+   cp 4 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
+   jp z, blankBotInCheckCollision_CC   
+   cp 3 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
+   jp z, blankBotInCheckCollision_CC   
+   cp 2 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
+   jp z, blankBotInCheckCollision_CC   
+   cp 1
+   jp nz, endOfCheckCollision_CC
+
+   
+   
+
+   
+   ld de, 33             
+   add hl, de
+   
+   push bc          
+        ld b, 4      ; check middle part of player bottom row
+        push hl
+        inc hl 
+        inc hl
+GoldCollectColLoop_2_CC       
+            ld a, (hl)
+            inc hl               
+            cp 133
+            jr z, CollisionWithEnemy_CC
+            cp 134
+            jr z, CollisionWithEnemy_CC            
+            cp 5
+            jr z, CollisionWithEnemy_CC            
+            djnz GoldCollectColLoop_2_CC          
+        pop hl
+    pop bc        
+
+blankBotInCheckCollision_CC
+
+#ifdef DEBUG_COLLISION_DETECT_2
+    ;print a block to work out where hl is now after previous loop
+    ;; even in debug mode comment in and out as needed or player falls through floor
+    push hl
+    push de
+    ld a, 136
+    ld (hl), a
+    
+    ;;also  print YSpeed
+    ld a, (YSpeed)
+    ld de, 68
+    call print_number8bits
+    pop de
+    pop hl
+#endif   
+
+    ;;; this is the bit that blanks under the player when they jump or land
+    ;; only blank middle 4 blocks
+    ld de, 34
+    add hl, de
+    ld a, 0        
+    ld (hl), a
+    inc hl
+    ld (hl), a
+    inc hl
+    ld (hl), a
+    inc hl
+    ld (hl), a
+    inc hl
+    ld (hl), a
+    
+    jr endOfCheckCollision_CC     
+    
+    
+
+CollisionWithEnemy_CC  ; uh oh :--///
+    pop hl  ;; as we jumped out of the loop need to pop these
+    pop bc  ;; as we jumped out of the loop need to pop these
+    ld a, 1
+    ld (hitEnemyRestartRoomFlag), a 
+    
+    ld a, (playerLives)
+    dec a
+    cp 0
+    jr z, gameOverRestart_CC   
+    
+    ld (playerLives), a
+    
+    jr endOfCheckCollision_CC
+    
+gameOverRestart_CC
+    ld a, 1
+    ld (gameOverRestartFlag),a        
+    jr endOfCheckCollision_CC        
+
+
+endOfCheckCollision_CC    
+    ret
+    
     
     
 drawDeathAndUpdateArrow    
