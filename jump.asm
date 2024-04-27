@@ -534,6 +534,11 @@ skipArraowDrawThisRoom
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 0, a						    ; SPACE
     jp z, doJump
+    
+    ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
+    in a, (KEYBOARD_READ_PORT)					; read from io port		
+    bit 1, a						    ; Z
+    jp z, doJump    
      
     jp updateRestOfScreen                       ; if no key pressed continue
 
@@ -569,6 +574,11 @@ moveLeft
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 0, a						    ; SPACE
     jp z, doJump
+    
+    ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
+    in a, (KEYBOARD_READ_PORT)					; read from io port		
+    bit 1, a						    ; Z
+    jp z, doJump        
     
     jp updateRestOfScreen 
 spriteNextLeft    
@@ -2839,7 +2849,7 @@ title_screen_txt
 keys_screen_txt_1
 	DEFB	_S,__,_T,_O,__,_S,_T,_A,_R,_T,26,__,_O,__,_L,_E,_F,_T,26,__,_P,__,_R,_I,_G,_H,_T,$ff
 keys_screen_txt_2
-	DEFB	__,__,__,__,__,__,__,__,__,__,__,__,_S,_P,_A,_C,_E,__,_EQ,__,_J,_U,_M,_P,,$ff    
+	DEFB	__,__,__,__,__,__,__,_Z,__,_O,_R,__,_S,_P,_A,_C,_E,__,_EQ,__,_J,_U,_M,_P,,$ff    
 
 game_objective_txt
 	DEFB	_T,_O,__,_W,_I,_N,__,_C,_O,_L,_L,_E,_C,_T,__, _A,_L,_L,__,_G,_O,_L,_D,$ff
