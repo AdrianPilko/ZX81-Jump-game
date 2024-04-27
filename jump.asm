@@ -1,5 +1,4 @@
 ; Copyright (c) 2024 Adrian Pilkington
-; Copyright (c) 2024 Adrian Pilkington
 
 ; Permission is hereby granted, free of charge, to any person obtaining a copy
 ; of this software and associated documentation files (the "Software"), to deal
@@ -53,7 +52,7 @@ CLS				EQU $0A2A
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
 ;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 11
+;#define DEBUG_ROOM_TO_START_IN 12
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -80,6 +79,10 @@ CLS				EQU $0A2A
 #define INITIAL_PLAYER_OFFSET 467
 #define ENEMY_CHAR_1 133
 #define ENEMY_CHAR_2 $5
+#define ARROW_START 225
+#define ARROW_END 198
+
+
 
 #define LAST_ROOM 13
 
@@ -362,6 +365,19 @@ initVariables
 
     ld hl, enemySprite4by4Blank
     ld (enemySprite4by4BlankPointer), hl
+    
+    
+    ld hl, Display+1
+    ld de,ARROW_START
+    add hl, de
+    ld (deathArrowPostion), hl
+    
+    ld hl, Display+1
+    ld de, ARROW_END
+    add hl, de   
+    ld (deathArrowEndPos), hl
+    xor a
+    ld (arrowEnabled), a
 
 
 #ifdef DEBUG_START_IN_ROOM_X    
@@ -422,7 +438,7 @@ continueWithprintTime
     cp 1
     jp nz, skipRoomDraw
     call resetTreasureInRoomSub
-    call drawRoom      
+    call drawRoom  
     
     
     ;; we're resetting player x y and currentPlayerLocation to fixed number
@@ -471,7 +487,20 @@ skipsetBlankSprite
     call checkTreasureSub
     
     call drawPlatforms   ; always do this as jump may corrupt them  
-       
+    
+    ld a, (currentRoom)
+    cp 1
+    jr z, drawArrowThisRoom     ;; special case for rooms 1 and 12 to have arrows
+    cp 12
+    jr z, drawArrowThisRoom    
+    xor a 
+    ld (arrowEnabled), a
+    jr skipArraowDrawThisRoom
+drawArrowThisRoom    
+    ld a, 1
+    ld (arrowEnabled), a
+    call drawDeathAndUpdateArrow   
+skipArraowDrawThisRoom
 ; keyboard layout for reading keys on ZX81
 ; BIT   left block      right block  BIT
 ; off                                off in <port>, when ld a, <port>
@@ -867,6 +896,11 @@ executeRestartCurrentRoom
     xor a
     ld (moveRoomFlag), a  ; first thing clear this flag otherwise continually move room :)
     ld (hitEnemyRestartRoomFlag), a
+    
+    ld hl, Display+1
+    ld de,ARROW_START
+    add hl, de
+    ld (deathArrowPostion), hl
     
 #ifdef DEBUG_ROOM_MOVE    
     ld de, moveRoomDebugTest
@@ -1274,8 +1308,10 @@ incOnlyfoundGold_YES              ;; keep a count of gold found
             inc a
             ld (goldFoundTemp), a
 noGoldFoundBypass                
+            cp 132
+            jp z, CollisionWithEnemy    
             cp 133
-            jp z, CollisionWithEnemy
+            jp z, CollisionWithEnemy        
             cp 134
             jp z, CollisionWithEnemy            
             cp 5
@@ -1305,6 +1341,8 @@ incOnlyfoundGold_YES_2              ;; keep a count of gold found
             inc a
             ld (goldFoundTemp), a
 noGoldFoundBypass_2  
+            cp 132    ;;; 132 happens to be part of arrow head
+            jp z, CollisionWithEnemy    
             cp 133
             jp z, CollisionWithEnemy
             cp 134
@@ -1420,7 +1458,7 @@ prefoundGold_YES
     push hl
     jp foundGold_YES    
 
-    
+
     
 
 CollisionWithEnemy  ; uh oh :--///
@@ -1490,6 +1528,61 @@ justPrintScore
     call printNumber    
     
     ret
+    
+    
+drawDeathAndUpdateArrow    
+    ld a, (arrowEnabled)
+    cp 0
+    jr z,noDrawArrow
+    
+    ld de, (deathArrowPostion)        
+    dec de    
+    ld a, (deathArrowEndPos)
+    cp e
+    jr z, checkArrowLSB
+    jr updateDeathArrowPos      
+checkArrowLSB
+    ld a, (deathArrowEndPos+1)
+    cp d
+    jr z, noDrawArrow
+
+updateDeathArrowPos
+    ld (deathArrowPostion), de
+
+drawDeathArrow        
+    ld hl, deathArrow
+    ld c, 4
+    ld b, 3    
+    call drawSprite  
+    
+    ; need to draw a blank after arrow    
+    ld de, (deathArrowPostion)   
+    ld hl, 4
+    add hl, de    
+    xor a
+    ld (hl), a
+    ld de, 33
+    add hl, de
+    ld (hl), a    
+    add hl, de
+    ld (hl), a    
+    add hl, de
+    ld (hl), a     
+    ret    ;; retrurn early here
+    
+noDrawArrow    ;; this just resets the arrow ready for next time it's fired
+    ld hl, Display+1
+    ld de,ARROW_START
+    add hl, de
+    ld (deathArrowPostion), hl
+    
+    ld hl, Display+1
+    ld de, ARROW_END
+    add hl, de   
+    ld (deathArrowEndPos), hl
+    xor a
+    ld (arrowEnabled), a   
+    ret    
     
 updateEnemySpritePositions
     ;check the direction then decide which ST or END to compare
@@ -2098,7 +2191,7 @@ gameOverDeathScene
     ld b,19  ; we have 20 frames in the player sprite that died     
 laidToRestLoop
     push bc	                  
-        ld de, 276    
+        ld de, 342    
         ld hl, Display+1
         add hl, de               
         push hl
@@ -2120,10 +2213,14 @@ delayLoopDeathScene
             ld b, 32
 delayLoopDeathScene_2
 
-            djnz delayLoopDeathScene_2        
+            djnz delayLoopDeathScene_2                            
         pop bc
         djnz delayLoopDeathScene
-    pop bc
+        ld a, 1
+        ld (arrowEnabled), a
+        call drawDeathAndUpdateArrow   
+    pop bc 
+    
     djnz laidToRestLoop
     
 
@@ -2709,6 +2806,12 @@ enemySpriteEight
 	DEFB $06, $00, $00, $86, $86, $00, $00, $06, $00, $86, $06, $00,
 	DEFB $00, $06, $86, $00, $06, $87, $00, $86, $86, $00, $01, $06,
 	DEFB $00, $86, $06, $00
+
+;4 by 3 poisoned arrow
+deathArrow
+	DEFB $87, $00, $00, $06, 
+    DEFB $84, $03, $03, $07, 
+    DEFB $00, $00, $00, $02
     
 gameTime_Seconds
     DEFB 0 
@@ -2748,7 +2851,7 @@ high_Score_txt
 credits_and_version_1
 	DEFB __,_B,_Y,__,_A,__,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,__, _2,_0,_2,_4,$ff
 credits_and_version_2
-	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_3,$ff    
+	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_4,$ff    
 credits_and_version_3
 	DEFB __,__,__,_Y,_O,_U,_T,_U,_B,_E,_CL, _B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff       
     
@@ -2817,6 +2920,12 @@ enemySpritePointerOne
 evenOddLoopFlag    
     DEFB 0
 evenOddLoopCount    
+    DEFB 0
+deathArrowPostion
+    DEFW 0
+deathArrowEndPos
+    DEFW 0
+arrowEnabled
     DEFB 0
 ;================== Room config design - may only be partially implemented
 ;; fixed length of 32 bytes per room
@@ -3670,46 +3779,46 @@ Room_2_Config
     
     DEFB 6    ; character of platform 0 = disabled  20
     DEFW 540  ; start of platform  21,22
-    DEFB 10    ; length  23
+    DEFB 9    ; length  23
     
     DEFB 6    ; character of platform 0 = disabled  24
-    DEFW 554  ; start of platform  25,26
-    DEFB 6    ; length             (byte 27)
+    DEFW 553  ; start of platform  25,26
+    DEFB 7    ; length             (byte 27)
     
     DEFB 6    ; 1 = enabled 0 = disabled  
-    DEFW 661  ; start of platform  25,26
+    DEFW 685  ; start of platform  25,26
     DEFB 7    ; length             (byte 27)        
     
     DEFB 6    ; 1 = enabled 0 = disabled  
     DEFW 672  ; start of platform  25,26
-    DEFB 10    ; length             (byte 27)    
+    DEFB 9    ; length             (byte 27)    
     ;;; tokens 2 bytes each
-    DEFW 277  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFW 342  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
     DEFB 1    ; is the trreasure enabled or not - used when 
-    DEFW 283  ; treasure token offset from DF_CC
+    DEFW 343  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
-    DEFW 290  ; treasure token offset from DF_CC
+    DEFW 344  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
-    DEFW 291  ; treasure token offset from DF_CC
+    DEFW 345  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
     
-    DEFW 206  ; enemySpriteZeroPos_ST 
-    DEFW 220  ; enemySpriteOnePos_ST  
+    DEFW 107  ; enemySpriteZeroPos_ST 
+    DEFW 120  ; enemySpriteOnePos_ST  
     DEFW 602  ; enemySpriteZeroPos_END
-    DEFW 616  ; enemySpriteOnePos_END 
+    DEFW 615  ; enemySpriteOnePos_END 
     DEFW 569  ; enemySpriteZeroPos_CUR
-    DEFW 253  ; enemySpriteOnePos_CUR 
+    DEFW 252  ; enemySpriteOnePos_CUR 
     DEFW 33    ; enemySpriteZeroPos_DIR
     DEFW 33    ; enemySpriteOnePos_DIR 
-    DEFB 0    ; enemy 0 full rate enemy = 1; half rate = 0
-    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0  
+    DEFB 1    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 1    ; enemy 1 full rate enemy = 1; half rate = 0  
     DEFW enemySpriteSeven
     DEFW enemySpriteSeven    
     DEFB  1  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  1  ; enemy one orientation horizontal = 0 vertical = 1 
     DEFB 2        ;; X position left most is zero
-    DEFB 14        ;; Y position bottom is 0
-    DEFW 101      ;; screen memory offset    
+    DEFB 8        ;; Y position bottom is 0
+    DEFW 299      ;; screen memory offset    
     DEFB _T,_H,_E,__,_B,_E,_L,_L,_S,__,$ff   ; this has to be 10 characters
 
 
