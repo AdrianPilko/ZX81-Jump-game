@@ -1322,7 +1322,7 @@ checkCollisionAndGoldCollect
     
     push hl
     push bc    
-   ; call checkForCollision
+    call checkForCollision
     pop bc
     pop hl    
     ret 
@@ -1481,22 +1481,12 @@ checkForCollision
     ld (hitEnemyRestartRoomFlag), a 
     
     push bc          
-    ld b, 5      ; check middle part of player top row
+        ld b, 4      ; check middle part of player top row
         push hl
         inc hl
+        inc hl
 GoldCollectColLoop_1_CC      
-
-#ifdef DEBUG_COLLISION_DETECT_1
-    ;print a block to work out where hl is before first check
-    ;; even in debug mode comment in and out as needed or player falls through floor
-    push hl
-    push de
-    ld a, 136
-    ld (hl), a    
-    call print_number8bits
-    pop de
-    pop hl
-#endif   
+            ;ld (hl), 8
             ld a, (hl)
             inc hl            
             cp 132
@@ -1513,9 +1503,10 @@ GoldCollectColLoop_1_CC
     
 checkAndGoldCollectRowLoop_CC
     push bc          
-    ld b, 2      ; only check left and right edges
+         ld b, 2      ; only check left and right edges
          push hl         
-GoldCollectColLoop_CC       
+GoldCollectColLoop_CC   
+            ;ld (hl), 8
             ld a, (hl)
             ld de, 7
             add hl, de 
@@ -1533,7 +1524,19 @@ GoldCollectColLoop_CC
         add hl, de
     pop bc
     djnz checkAndGoldCollectRowLoop_CC    
-  
+
+#ifdef DEBUG_COLLISION_DETECT_2
+    ;print a block to work out where hl is now after previous loop
+    ;; even in debug mode comment in and out as needed or player falls through floor
+    push hl
+    push de  
+    ;;also  print YSpeed
+    ld a, (YSpeed)
+    ld de, 68
+    call print_number8bits
+    pop de
+    pop hl
+#endif     
    
    ;;; check YSpeed , if > 0 then wipe the line below and don't check for enemy or gold
    ;; YSpeed is only ever non zero when player moving up, not when moving down
@@ -1547,7 +1550,9 @@ GoldCollectColLoop_CC
    cp 2 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
    jp z, blankBotInCheckCollision_CC   
    cp 1
-   jp nz, endOfCheckCollision_CC
+   jp z, blankBotInCheckCollision_CC
+   cp 0
+   jp z, endOfCheckCollision_CC
 
    
    
@@ -1561,7 +1566,8 @@ GoldCollectColLoop_CC
         push hl
         inc hl 
         inc hl
-GoldCollectColLoop_2_CC       
+GoldCollectColLoop_2_CC  
+            ;ld (hl), 8     
             ld a, (hl)
             inc hl               
             cp 133
@@ -1575,23 +1581,6 @@ GoldCollectColLoop_2_CC
     pop bc        
 
 blankBotInCheckCollision_CC
-
-#ifdef DEBUG_COLLISION_DETECT_2
-    ;print a block to work out where hl is now after previous loop
-    ;; even in debug mode comment in and out as needed or player falls through floor
-    push hl
-    push de
-    ld a, 136
-    ld (hl), a
-    
-    ;;also  print YSpeed
-    ld a, (YSpeed)
-    ld de, 68
-    call print_number8bits
-    pop de
-    pop hl
-#endif   
-
     ;;; this is the bit that blanks under the player when they jump or land
     ;; only blank middle 4 blocks
     ld de, 34
