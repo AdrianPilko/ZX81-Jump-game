@@ -360,6 +360,7 @@ initVariables
     ld (gameTimeCounterJIFFIES), a
     ld (enemySpriteFrameZero), a
     ld (enemySpriteFrameOne), a  
+    ld (noJumpInNextGameLoopFlag), a 
     
     call initialiseEnemysForRoom
 
@@ -529,7 +530,10 @@ skipArraowDrawThisRoom
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 0, a					        ; P
     jp z, moveRight
-    
+
+    ld a, (noJumpInNextGameLoopFlag)    
+    cp 1 
+    jr z, skipJumpKeyDetect_1
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 0, a						    ; SPACE
@@ -539,7 +543,9 @@ skipArraowDrawThisRoom
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 1, a						    ; Z
     jp z, doJump    
-     
+skipJumpKeyDetect_1    
+    xor a
+    ld (noJumpInNextGameLoopFlag), a 
     jp updateRestOfScreen                       ; if no key pressed continue
 
 moveLeft         
@@ -570,6 +576,10 @@ moveLeft
     add hl, de
     ld (playerSpritePointer), hl    
 
+    ld a, (noJumpInNextGameLoopFlag)    
+    cp 1 
+    jr z, skipJumpKeyDetect_3
+    
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 0, a						    ; SPACE
@@ -579,7 +589,9 @@ moveLeft
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 1, a						    ; Z
     jp z, doJump        
-    
+skipJumpKeyDetect_3    
+    xor a
+    ld (noJumpInNextGameLoopFlag), a 
     jp updateRestOfScreen 
 spriteNextLeft    
     ld hl, playerSpriteLeftMove
@@ -617,6 +629,10 @@ moveRight
     add hl, de
     ld (playerSpritePointer), hl    
 
+    ld a, (noJumpInNextGameLoopFlag)    
+    cp 1 
+    jr z, skipJumpKeyDetect_2
+    
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 0, a						    ; SPACE
@@ -626,7 +642,9 @@ moveRight
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 1, a						    ; Z
     jp z, doJump         
-    
+skipJumpKeyDetect_2
+    xor a
+    ld (noJumpInNextGameLoopFlag), a 
     jp updateRestOfScreen 
 spriteNextRight    
     ld hl, playerSpriteRightMove
@@ -636,6 +654,8 @@ spriteNextRight
     jp updateRestOfScreen 
     
 doJump      ; triggered when jump key pressed just sets the YSpeed      
+    ld a, 1 
+    ld (noJumpInNextGameLoopFlag), a
     ld a, (groundPlatFlag)   ;; this is so you can only jump off a platform
     cp 1
     jp z, setYSpeed
@@ -1216,8 +1236,14 @@ drawPlatform
     ld hl, (platformStartAddress)
 drawPlatformLoop
     ld a, (hl)
-    cp 0
+    cp 129
+    jr z, doTheDrawPlatformAnyway
+    cp 130
+    jr z, doTheDrawPlatformAnyway    
+    cp 0    
     jr nz, skipDrawAlreadySprite1            
+    
+doTheDrawPlatformAnyway
     ld a, SHAPE_CHAR_WALL ; force all platforms to be same to help ease checking landed
     ld (hl), a
 skipDrawAlreadySprite1    
@@ -2942,6 +2968,8 @@ deathArrowEndPos
     DEFW 0
 arrowEnabled
     DEFB 0
+noJumpInNextGameLoopFlag
+    DEFB 0
 ;================== Room config design - may only be partially implemented
 ;; fixed length of 32 bytes per room
 
@@ -3025,11 +3053,12 @@ startOfRoom1Treasure
     ;; enemy definition gets loaded into these when room entered
 firstEnemyAddress      ;;  36 bytes   
     DEFW 270  ; enemySpriteZeroPos_ST 
-    DEFW 109  ; enemySpriteOnePos_ST  
+    DEFW 108  ; enemySpriteOnePos_ST  
     DEFW 600  ; enemySpriteZeroPos_END
     DEFW 126  ; enemySpriteOnePos_END 
+    ;DEFW 111  ; enemySpriteOnePos_END 
     DEFW 435  ; enemySpriteZeroPos_CUR
-    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 109  ; enemySpriteOnePos_CUR 
     DEFW 33    ; enemySpriteZeroPos_DIR
     DEFW 1    ; enemySpriteOnePos_DIR 
     DEFB 1    ; enemy 0 full rate enemy = 0; slow rate = 1
