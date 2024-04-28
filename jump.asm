@@ -361,6 +361,8 @@ initVariables
     ld (enemySpriteFrameZero), a
     ld (enemySpriteFrameOne), a  
     ld (noJumpInNextGameLoopFlag), a 
+    ld (bangedHeadFlag), a
+    ld (landPlayerFlag), a
     
     call initialiseEnemysForRoom
 
@@ -416,14 +418,12 @@ resetEvenOddAndSetFlag
     
 continueWithprintTime      
     call printTime
-    call printLives
-    
-    ld hl, (currentPlayerLocation) ;; hl is the location to start checking
-    ld de, -33
-    add hl, de
-    ld b, 9 ;; b is the rows to check 
-    ld c, 8 ;; c is the columns to check    
+    call printLives   
     call checkCollisionAndGoldCollect  ; we check this before the blank sprite is drawn     
+
+    xor a   ; clear these used in checkCollisionAndGoldCollect
+    ld (landPlayerFlag), a 
+    ld (bangedHeadFlag), a
     
     ld a, (hitEnemyRestartRoomFlag)
     cp 1    
@@ -454,7 +454,6 @@ skipRoomDraw
     call blankEnemySprites
     call drawEnemySprites        
     call updateEnemySpritePositions
-    
     call checkIfPlatformOrGround   ; sets groundPlatFlag
     
     jp nz, setBiggerBlankSprite
@@ -704,8 +703,11 @@ jumpUpLoop
 zeroYSpeedBangedHead
     xor a
     ld (YSpeed), a
+    ld a, 1
+    ld (bangedHeadFlag), a 
+    jp skipLandPlayer
+    
 skipDecrmentYSpeed
-   
 checkYPosition  ; need to bring player back to ground   
     ld a, (groundPlatFlag)
     cp 0
@@ -722,6 +724,9 @@ landPlayer
     ld a, (playerYPos)    
     dec a
     ld (playerYPos), a    
+    ld a, 1
+    ld (landPlayerFlag),a 
+      
     
 skipLandPlayer        
       
@@ -1314,17 +1319,54 @@ drawSprite_OR_ColLoop
 ;;;; TODO check only the outer edges of player
 
 checkCollisionAndGoldCollect 
+    ld hl, (currentPlayerLocation) ;; hl is the location to start checking
+    ld de, -33
+    add hl, de
+    ld b, 8 ;; b is the rows to check 
+    ld c, 8 ;; c is the columns to check    
+
     push hl
     push bc
     call checkForGold
     pop bc
     pop hl
     
+
+    ld a, (bangedHeadFlag)
+    cp 1        
+    jr z, adjustToOneRowHigher
+    
+    ld a, (landPlayerFlag)
+    cp 1        
+    jr z, checkAdjustToOneRowHigher    
+    jr noPlayerPosAdjustment
+    
+checkAdjustToOneRowHigher
+    ld b, 10
+    ld a, (YSpeed)    
+    cp 0
+    jp nz, noPlayerPosAdjustment
+adjustToOneRowHigher    
+
+    ld b, 10    
+    ld hl, (currentPlayerLocation) ;; hl is the location to start checking
+    ld de, -66
+    add hl, de    
+    
+noPlayerPosAdjustment     
+#ifdef DEBUG_FLAGS
     push hl
-    push bc    
+    ld de, 69
+    ld a, (bangedHeadFlag)
+    call print_number8bits    
+    
+    ld de, 73
+    ld a, (bangedHeadFlag)
+    call print_number8bits   
+    pop hl
+#endif    
+    
     call checkForCollision
-    pop bc
-    pop hl    
     ret 
     
     
@@ -1482,93 +1524,129 @@ checkForCollision
     
     push bc          
         ld b, 4      ; check middle part of player top row
-        push hl
-        inc hl
-        inc hl
-GoldCollectColLoop_1_CC      
-            ;ld (hl), 8
+        ;push hl
+           inc hl
+           inc hl
+GoldCollectColLoop_1_CC                  
             ld a, (hl)
-            inc hl            
+            ;ld (hl), 8
+            inc hl                        
+            cp 1    ; these are all the characters that can be an enemy sprite
+                    ; some are commented out because they cause collision when player walks
+            jp z, CollisionWithEnemy_CC
+            cp 2
+            jp z, CollisionWithEnemy_CC
+            cp 3
+            jp z, CollisionWithEnemy_CC
+            cp 4
+            jp z, CollisionWithEnemy_CC
+            cp 5
+            jp z, CollisionWithEnemy_CC
+            cp 6
+            jp z, CollisionWithEnemy_CC
+            cp 7
+            jp z, CollisionWithEnemy_CC
+            ;cp 129
+            ;jp z, CollisionWithEnemy_CC            
+            ;cp 130
+            ;jp z, CollisionWithEnemy_CC                        
+            cp 131
+            jp z, CollisionWithEnemy_CC                        
             cp 132
-            jp z, CollisionWithEnemy_CC    
+            jp z, CollisionWithEnemy_CC                
             cp 133
             jp z, CollisionWithEnemy_CC        
             cp 134
             jp z, CollisionWithEnemy_CC            
-            cp 5
-            jp z, CollisionWithEnemy_CC            
+            ;cp 135
+            ;jp z, CollisionWithEnemy_CC            
             djnz GoldCollectColLoop_1_CC          
-        pop hl
+ ;       pop hl
     pop bc        
-    
+
+    ld de, 27
+    add hl, de
 checkAndGoldCollectRowLoop_CC
-    push bc          
-         ld b, 2      ; only check left and right edges
-         push hl         
+    push bc
+         ld b, 2      ; only check left and right edges      
 GoldCollectColLoop_CC   
-            ;ld (hl), 8
             ld a, (hl)
-            ld de, 7
-            add hl, de 
-            cp 132    ;;; 132 happens to be part of arrow head
-            jp z, CollisionWithEnemy_CC    
-            cp 133
+            ;ld (hl), 8
+            
+            cp 1    ; these are all the characters that can be an enemy sprite
+                    ; some are commented out because they cause collision when player walks
             jp z, CollisionWithEnemy_CC
+            cp 2
+            jp z, CollisionWithEnemy_CC
+            cp 3
+            jp z, CollisionWithEnemy_CC
+            ;cp 4
+            ; jp z, CollisionWithEnemy_CC
+            ; cp 5
+            ; jp z, CollisionWithEnemy_CC
+            ; cp 6
+            ; jp z, CollisionWithEnemy_CC
+            ; cp 7
+            ; jp z, CollisionWithEnemy_CC
+            
+            
+            ;cp 129
+            ;jp z, CollisionWithEnemy_CC            
+            ;cp 130
+            ;jp z, CollisionWithEnemy_CC   
+
+            
+            cp 131
+            jp z, CollisionWithEnemy_CC                        
+            cp 132
+            jp z, CollisionWithEnemy_CC                
+            cp 133
+            jp z, CollisionWithEnemy_CC        
             cp 134
             jp z, CollisionWithEnemy_CC            
-            cp 5
-            jp z, CollisionWithEnemy_CC            
+            ;cp 135
+            ;jp z, CollisionWithEnemy_CC            
+            ld a, (hl)
+            ld de, 7
+            add hl, de             
             djnz GoldCollectColLoop_CC
-        pop hl
-        ld de, 33             ;; move next write position to next row        
+        ld de, 19             ;; move next write position to next row        
         add hl, de
-    pop bc
-    djnz checkAndGoldCollectRowLoop_CC    
+   pop bc   
+   djnz checkAndGoldCollectRowLoop_CC    
 
-#ifdef DEBUG_COLLISION_DETECT_2
-    ;print a block to work out where hl is now after previous loop
-    ;; even in debug mode comment in and out as needed or player falls through floor
-    push hl
-    push de  
-    ;;also  print YSpeed
-    ld a, (YSpeed)
-    ld de, 68
-    call print_number8bits
-    pop de
-    pop hl
-#endif     
-   
    ;;; check YSpeed , if > 0 then wipe the line below and don't check for enemy or gold
    ;; YSpeed is only ever non zero when player moving up, not when moving down
    ld a, (YSpeed)
    cp 5 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
-   jp z, blankBotInCheckCollision_CC   
+   jr z, blankBotInCheckCollision_CC   
    cp 4 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
-   jp z, blankBotInCheckCollision_CC   
+   jr z, blankBotInCheckCollision_CC   
    cp 3 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
-   jp z, blankBotInCheckCollision_CC   
+   jr z, blankBotInCheckCollision_CC   
    cp 2 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
-   jp z, blankBotInCheckCollision_CC   
+   jr z, blankBotInCheckCollision_CC   
    cp 1
-   jp z, blankBotInCheckCollision_CC
+   jr z, blankBotInCheckCollision_CC
    cp 0
-   jp z, endOfCheckCollision_CC
+   jr z, endOfCheckCollision_CC
+
+   
 
    
    
 
    
-   ld de, 33             
-   add hl, de
-   
+    
    push bc          
         ld b, 4      ; check middle part of player bottom row
         push hl
         inc hl 
         inc hl
 GoldCollectColLoop_2_CC  
-            ;ld (hl), 8     
+            
             ld a, (hl)
+            ld (hl), 128     
             inc hl               
             cp 133
             jr z, CollisionWithEnemy_CC
@@ -1579,13 +1657,14 @@ GoldCollectColLoop_2_CC
             djnz GoldCollectColLoop_2_CC          
         pop hl
     pop bc        
-
+    jr endOfCheckCollision_CC
+    
 blankBotInCheckCollision_CC
     ;;; this is the bit that blanks under the player when they jump or land
     ;; only blank middle 4 blocks
-    ld de, 34
-    add hl, de
-    ld a, 0        
+    ;ld de, 33
+    ;add hl, de
+    ld a, 0  ; when debugging set to 8 to see where it would be blanking        
     ld (hl), a
     inc hl
     ld (hl), a
@@ -1595,14 +1674,17 @@ blankBotInCheckCollision_CC
     ld (hl), a
     inc hl
     ld (hl), a
-    
+    inc hl
+    ld (hl), a   
+    inc hl
+    ld (hl), a      
     jr endOfCheckCollision_CC     
     
-    
-
-CollisionWithEnemy_CC  ; uh oh :--///
+  
+CollisionWithEnemy_CC  ; uh oh :--///    
     pop hl  ;; as we jumped out of the loop need to pop these
     pop bc  ;; as we jumped out of the loop need to pop these
+ 
     ld a, 1
     ld (hitEnemyRestartRoomFlag), a 
     
@@ -2762,6 +2844,9 @@ playerSpriteDeathSequence
 	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
 	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,
 	  DEFB		$00, $00, $00, $00, $00, $00, $00, $00
+    jp intro_title  ;; protection for memory overwrite
+    jp intro_title  ;; protection for memory overwrite
+    jp intro_title  ;; protection for memory overwrite
     
    
 ; used to clear current location before move    
@@ -2947,7 +3032,7 @@ high_Score_txt
 credits_and_version_1
 	DEFB __,_B,_Y,__,_A,__,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,__, _2,_0,_2,_4,$ff
 credits_and_version_2
-	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_4,$ff    
+	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_5,$ff    
 credits_and_version_3
 	DEFB __,__,__,_Y,_O,_U,_T,_U,_B,_E,_CL, _B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff       
     
@@ -2963,6 +3048,10 @@ playerXPos
     DEFB 0   
 playerYPos    
     DEFB 0  
+bangedHeadFlag
+    DEFB 0
+landPlayerFlag
+    DEFB 0
 score_mem_tens
     DEFB 0
 score_mem_hund
