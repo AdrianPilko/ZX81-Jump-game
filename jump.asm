@@ -929,13 +929,20 @@ executeMoveRoom
     daa
     ld (currentRoomDisplay), a
     call initialiseEnemysForRoom
-    
+        
+    xor a   ; clear these used in checkCollisionAndGoldCollect
+    ld (bangedHeadFlag), a
+    ld (landPlayerFlag), a 
+    ld (YSpeed), a
     ret 
 
 executeRestartCurrentRoom
     xor a
     ld (moveRoomFlag), a  ; first thing clear this flag otherwise continually move room :)
-    ld (hitEnemyRestartRoomFlag), a
+    ld (hitEnemyRestartRoomFlag), a    
+    ld (bangedHeadFlag), a
+    ld (landPlayerFlag), a 
+    ld (YSpeed), a
     
     ld hl, Display+1
     ld de,ARROW_START
@@ -1347,25 +1354,11 @@ checkAdjustToOneRowHigher
     cp 0
     jp nz, noPlayerPosAdjustment
 adjustToOneRowHigher    
-
     ld b, 10    
     ld hl, (currentPlayerLocation) ;; hl is the location to start checking
     ld de, -66
-    add hl, de    
-    
-noPlayerPosAdjustment     
-#ifdef DEBUG_FLAGS
-    push hl
-    ld de, 69
-    ld a, (bangedHeadFlag)
-    call print_number8bits    
-    
-    ld de, 73
-    ld a, (bangedHeadFlag)
-    call print_number8bits   
-    pop hl
-#endif    
-    
+    add hl, de        
+noPlayerPosAdjustment        
     call checkForCollision
     ret 
     
@@ -1640,11 +1633,9 @@ GoldCollectColLoop_CC
     
    push bc          
         ld b, 4      ; check middle part of player bottom row
-        push hl
         inc hl 
         inc hl
-GoldCollectColLoop_2_CC  
-            
+GoldCollectColLoop_2_CC              
             ld a, (hl)
             ld (hl), 128     
             inc hl               
@@ -1655,7 +1646,6 @@ GoldCollectColLoop_2_CC
             cp 5
             jr z, CollisionWithEnemy_CC            
             djnz GoldCollectColLoop_2_CC          
-        pop hl
     pop bc        
     jr endOfCheckCollision_CC
     
@@ -1682,7 +1672,6 @@ blankBotInCheckCollision_CC
     
   
 CollisionWithEnemy_CC  ; uh oh :--///    
-    pop hl  ;; as we jumped out of the loop need to pop these
     pop bc  ;; as we jumped out of the loop need to pop these
  
     ld a, 1
@@ -2688,16 +2677,8 @@ Display        	DEFB $76
                 DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,$76           
 
 Variables: 
-LineOfBlank
-                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                               
-  
-YSpeed   
-    DEFB 0
-currentPlayerLocation 
-    DEFW 0
-previousPlayerLocation    
-    DEFW 0
+LinesOfBlank    ; these should protect sprite dataif character falls through floor
+                DEFB  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,           
 ;; 336 bytes of sprite data packed, each sprite 8*8 characters and 3 frames right then left
 playerSpriteRightMove                
   DEFB	    $00, $00, $87, $80, $82, $00, $00, $00, $00, $00, $85, $80,
@@ -2913,6 +2894,12 @@ treasureCharacter
 enemySprites   ;; keeping these to 4*4 for speed and size
 enemySprite4by4BlankPointer
     DEFW 0
+YSpeed   
+    DEFB 0
+currentPlayerLocation 
+    DEFW 0
+previousPlayerLocation    
+    DEFW 0    
 enemySprite4by4Blank
     DEFB 0, 0, 0 ,0, 0, 0
     DEFB 0, 0, 0 ,0, 0, 0
