@@ -52,7 +52,7 @@ CLS				EQU $0A2A
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
 ;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 12
+;#define DEBUG_ROOM_TO_START_IN 13
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -81,10 +81,13 @@ CLS				EQU $0A2A
 #define ENEMY_CHAR_2 $5
 #define ARROW_START 225
 #define ARROW_END 198
+#define ARROW_START_INTRO 93
+#define ARROW_END_INTRO 66
 
 
 
-#define LAST_ROOM 13
+
+#define LAST_ROOM 14
 
 ;70
 #define SIZE_OF_ROOM_CONFIG Room_2_Config-Room_1_Config    
@@ -211,7 +214,7 @@ Line1Text:      DEFB $ea                        ; REM
 	jp intro_title		; main entry poitn to the code ships the memory definitions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 introWaitLoop
-	ld b,128
+	ld b,64
 introWaitLoop_1
     push bc	
         ld de, 496    
@@ -222,13 +225,16 @@ introWaitLoop_1
         ld c, 8
         ld b, 8    
         call drawSprite   
+        ld a, 1
+        ld (arrowEnabled), a
+        call drawIntroAndUpdateArrow    
     pop bc
 	djnz introWaitLoop_1
     jp read_start_key_1     ;; have to have 2 labels as not a call return
    
 secondIntroWaitLoop    
    
-    ld b, 128
+    ld b, 64
 introWaitLoop_2
     push bc
         ld de, 496    
@@ -238,7 +244,10 @@ introWaitLoop_2
         ld hl, playerSpriteRightMove
         ld c, 8
         ld b, 8    
-        call drawSprite   
+        call drawSprite 
+        ld a, 1
+        ld (arrowEnabled), a
+        call drawIntroAndUpdateArrow          
     pop bc
     djnz introWaitLoop_2
 
@@ -250,16 +259,24 @@ intro_title
     cp 1
     call z, gameOverDeathScene
     
+    call initialiseStartScreenArrow
+    
     xor a
     ld (gameOverRestartFlag), a
-    
+        
     ld a, (score_mem_tens)
     ld (last_score_mem_tens),a
     ld a, (score_mem_hund)
     ld (last_score_mem_hund),a        
 
     
-	ld bc,111
+	ld bc,1
+	ld de,title_screen_txt
+	call printstring
+	ld bc,12
+	ld de,title_screen_txt
+	call printstring
+    ld bc,23
 	ld de,title_screen_txt
 	call printstring
 	ld bc,202    
@@ -302,6 +319,7 @@ intro_title
     ld c, 8
     ld b, 8    
     call drawSprite
+   
    
 	
 read_start_key_1
@@ -370,17 +388,7 @@ initVariables
     ld (enemySprite4by4BlankPointer), hl
     
     
-    ld hl, Display+1
-    ld de,ARROW_START
-    add hl, de
-    ld (deathArrowPostion), hl
-    
-    ld hl, Display+1
-    ld de, ARROW_END
-    add hl, de   
-    ld (deathArrowEndPos), hl
-    xor a
-    ld (arrowEnabled), a
+    call initialiseDeathArrow
 
 
 #ifdef DEBUG_START_IN_ROOM_X    
@@ -1693,6 +1701,90 @@ gameOverRestart_CC
 
 
 endOfCheckCollision_CC    
+    ret
+
+initialiseStartScreenArrow    
+    ld hl, Display+1
+    ld de,ARROW_START_INTRO
+    add hl, de
+    ld (deathArrowPostion), hl
+    
+    ld hl, Display+1
+    ld de, ARROW_END_INTRO
+    add hl, de   
+    ld (deathArrowEndPos), hl
+    xor a
+    ld (arrowEnabled), a
+    ret
+    
+    
+drawIntroAndUpdateArrow    
+    ld a, (arrowEnabled)
+    cp 0
+    jp z,noDrawArrow
+    
+    ld de, (deathArrowPostion)        
+    dec de    
+    ld a, (deathArrowEndPos)
+    cp e
+    jr z, checkArrowLSB_INTRO
+    jr updateDeathArrowPos_INTRO      
+checkArrowLSB_INTRO
+    ld a, (deathArrowEndPos+1)
+    cp d
+    jr z, noDrawArrow_INTRO
+
+updateDeathArrowPos_INTRO
+    ld (deathArrowPostion), de
+
+drawDeathArrow_INTRO        
+    ld hl, deathArrow
+    ld c, 4
+    ld b, 3    
+    call drawSprite  
+    
+    ; need to draw a blank after arrow    
+    ld de, (deathArrowPostion)   
+    ld hl, 4
+    add hl, de    
+    xor a
+    ld (hl), a
+    ld de, 33
+    add hl, de
+    ld (hl), a    
+    add hl, de
+    ld (hl), a    
+    add hl, de
+    ld (hl), a     
+    ret    ;; retrurn early here
+    
+noDrawArrow_INTRO    ;; this just resets the arrow ready for next time it's fired
+    ld hl, Display+1
+    ld de,ARROW_START_INTRO
+    add hl, de
+    ld (deathArrowPostion), hl
+    
+    ld hl, Display+1
+    ld de, ARROW_END_INTRO
+    add hl, de   
+    ld (deathArrowEndPos), hl
+    xor a
+    ld (arrowEnabled), a   
+    ret        
+    
+    
+initialiseDeathArrow
+    ld hl, Display+1
+    ld de,ARROW_START
+    add hl, de
+    ld (deathArrowPostion), hl
+    
+    ld hl, Display+1
+    ld de, ARROW_END
+    add hl, de   
+    ld (deathArrowEndPos), hl
+    xor a
+    ld (arrowEnabled), a
     ret
     
     
@@ -3996,8 +4088,71 @@ Room_2_Config
     DEFW 299      ;; screen memory offset    
     DEFB _T,_H,_E,__,_B,_E,_L,_L,_S,__,$ff   ; this has to be 10 characters
 
-
     DEFB 13    ; room ID   
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 495   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    
+    DEFB 0    ; character of platform 0 = disabled  (byte16)
+    DEFW 370  ; start of platform   17,18
+    DEFB 24    ; length   19
+    
+    DEFB 0    ; character of platform 0 = disabled  20
+    DEFW 595  ; start of platform  21,22
+    DEFB 6    ; length  23
+    
+    DEFB 1    ; character of platform 0 = disabled  24
+    DEFW 397  ; start of platform  25,26
+    DEFB 24    ; length             (byte 27)
+    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 394  ; start of platform  25,26
+    DEFB 13    ; length             (byte 27)        
+    
+    DEFB 0    ; 1 = enabled 0 = disabled  
+    DEFW 64  ; start of platform  25,26
+    DEFB 2    ; length             (byte 27)    
+    ;;; tokens 2 bytes each
+    DEFW 583  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when controlling flashing
+    DEFW 584  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when controlling flashing    
+    DEFW 585  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when controlling flashing    
+    DEFW 586  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when controlling flashing    
+    DEFW 629  ; enemySpriteZeroPos_ST 
+    DEFW 629  ; enemySpriteOnePos_ST  
+    DEFW 654  ; enemySpriteZeroPos_END
+    DEFW 654  ; enemySpriteOnePos_END 
+    DEFW 631  ; enemySpriteZeroPos_CUR
+    DEFW 652  ; enemySpriteOnePos_CUR 
+    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 1    ; enemySpriteOnePos_DIR 
+    DEFB 0    ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 0    ; enemy 1 full rate enemy = 1; half rate = 0      
+    DEFW enemySpriteEight
+    DEFW enemySpriteEight
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1   
+    DEFB 2      ;; X position left most is zero
+    DEFB 14        ;; Y position bottom is 0
+    DEFW 134      ;; screen memory offset
+    DEFB _J,_U,_S,_T,__,_R,_U,_N,__,__,$ff        
+    
+    
+    DEFB 14    ; room ID   
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
     DEFW 196   ; offset from DF_CC to top of door
