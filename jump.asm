@@ -23,22 +23,9 @@
 ;;;
 ;;; https://youtube.com/@byteforever7829
 
-;;; Known bugs
-;;    1) a copy of players feet get left behind after a jump
-;;    2) if the gold is landed on from top the score doesn't increase and stuck in room
+;;; Known bug(s)
+;;    1) a copy of players feet get left behind after a jump - less than before but still happens mainly on running left or right jumps
 
-;;; todo list 
-;;    1) add enemy sprites to room config DONE
-;;    2) add moveable enemy sprites  DONE
-;;    3) rewrite enemy sprite draw to make it a smaller proper subroutines DONE
-;;    4) design more rooms ONGOING
-;;    5) add verical bariiers to rooms
-;;    6) add player lives, and killed if hits enemy DONE
-;;    7) add disapearing platforms and to room config 
-;;    8) add more platforms  ONGOING (now can have 5)
-;;    9) optimise the player check collision with gold to use only outer blocks DONE
-;;   10) vertical moving enemys DONE
-;;   11) add death scene DONE
 
 ;some #defines for compatibility with other assemblers
 #define         DEFB .byte 
@@ -47,12 +34,12 @@
 #define         ORG  .org
 CLS				EQU $0A2A
 ;;;;;#define DEBUG_NO_SCROLL
-;;;;;#define DEBUG_PLAYER_XY
+#define DEBUG_PLAYER_XY
 ;;#define DEBUG_SPRITE_ADDRESS 1
 ;;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
 ;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 13
+;#define DEBUG_ROOM_TO_START_IN 7
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -427,6 +414,7 @@ resetEvenOddAndSetFlag
 continueWithprintTime      
     call printTime
     call printLives   
+    call printRoomName
     call checkCollisionAndGoldCollect  ; we check this before the blank sprite is drawn     
 
     xor a   ; clear these used in checkCollisionAndGoldCollect
@@ -742,12 +730,16 @@ skipMove
 
 ;;; player x,y debug
 #ifdef DEBUG_PLAYER_XY
-    ld de, 34
+    ld de, 68
     ld a, (playerXPos)
     call print_number8bits    
     ld a, (playerYPos)
-    ld de, 38
+    ld de, 71
     call print_number8bits
+    ld bc, (currentPlayerLocation)
+    ld de, 74
+    call print_number16bits
+    
 #endif
 #ifdef DEBUG_MULTIRATECOUNT
     ld a, (evenOddLoopCount)
@@ -2617,7 +2609,15 @@ printLives
     ld de, 51    
     call print_number8bits        
     ret
-
+    
+printRoomName    
+    ld de, (RoomConfigAddress)
+    ld hl, OFFSET_TO_ROOM_NAME
+    add hl, de
+    ld bc, 35
+    ex de, hl    
+    call printstring  
+    ret
     
 
 
@@ -3194,7 +3194,8 @@ arrowEnabled
 noJumpInNextGameLoopFlag
     DEFB 0
 ;================== Room config design - may only be partially implemented
-;; fixed length of 32 bytes per room
+;; fixed length per room using #define Room_2_Config-Room_1_Config to calculate
+;; and other labels sprinkled through the first room
 
 ; Room Config. Every room will have a predefined layout using simple constructs
 ; They will follow this common layout:
@@ -3277,7 +3278,7 @@ startOfRoom1Treasure
 firstEnemyAddress      ;;  36 bytes   
     DEFW 270  ; enemySpriteZeroPos_ST 
     DEFW 108  ; enemySpriteOnePos_ST  
-    DEFW 600  ; enemySpriteZeroPos_END
+    DEFW 633  ; enemySpriteZeroPos_END
     DEFW 126  ; enemySpriteOnePos_END 
     ;DEFW 111  ; enemySpriteOnePos_END 
     DEFW 435  ; enemySpriteZeroPos_CUR
@@ -3635,7 +3636,7 @@ Room_2_Config
     DEFB 6    ; room ID   
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
-    DEFW 196   ; offset from DF_CC to top of door
+    DEFW 262   ; offset from DF_CC to top of door
     DEFB 8    ; 9 blocks high
     DEFB 1    ; ID of next room from this one
     DEFB 0    ; Door orientation east=1  0= door disabled
@@ -3653,16 +3654,16 @@ Room_2_Config
     DEFB 1    ; length   19
     
     DEFB 137    ; character of platform 0 = disabled  20
-    DEFW 454  ; start of platform  21,22
-    DEFB 1    ; length  23
+    DEFW 520  ; start of platform  21,22
+    DEFB 6    ; length  23
     
     DEFB 128    ; character of platform 0 = disabled  24
-    DEFW 364  ; start of platform  25,26
-    DEFB 1    ; length             (byte 27)
+    DEFW 397  ; start of platform  25,26
+    DEFB 6    ; length             (byte 27)
     
-    DEFB 0    ; 1 = enabled 0 = disabled  
-    DEFW 394  ; start of platform  25,26
-    DEFB 13    ; length             (byte 27)        
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 652  ; start of platform  25,26
+    DEFB 4    ; length             (byte 27)        
     
     DEFB 0    ; 1 = enabled 0 = disabled  
     DEFW 64  ; start of platform  25,26
@@ -3677,7 +3678,7 @@ Room_2_Config
     DEFW 586  ; treasure token offset from DF_CC
     DEFB 1    ; is the trreasure enabled or not - used when 
     
-    DEFW 640  ; enemySpriteZeroPos_ST 
+    DEFW 636  ; enemySpriteZeroPos_ST 
     DEFW 113  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
     DEFW 122  ; enemySpriteOnePos_END 
@@ -3691,9 +3692,9 @@ Room_2_Config
     DEFW enemySpriteTwo    
     DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
     DEFB  0  ; enemy one orientation horizontal = 0 vertical = 1    
-    DEFB 5        ;; X position left most is zero
-    DEFB 3        ;; Y position bottom is 0
-    DEFW 467      ;; screen memory offset    
+    DEFB 1        ;; X position left most is zero
+    DEFB 13        ;; Y position bottom is 0
+    DEFW 100      ;; screen memory offset    
     DEFB _S,_E,_E,_N,0,_B,_4,_QM,_QM,0,$ff
 
 
@@ -3719,7 +3720,7 @@ Room_2_Config
     
     DEFB 137    ; character of platform 0 = disabled  20
     DEFW 454  ; start of platform  21,22
-    DEFB 1    ; length  23
+    DEFB 4    ; length  23
     
     DEFB 128    ; character of platform 0 = disabled  24
     DEFW 364  ; start of platform  25,26
@@ -3743,7 +3744,7 @@ Room_2_Config
     DEFB 1    ; is the trreasure enabled or not - used when 
     
     DEFW 640  ; enemySpriteZeroPos_ST 
-    DEFW 113  ; enemySpriteOnePos_ST  
+    DEFW 102  ; enemySpriteOnePos_ST  
     DEFW 647  ; enemySpriteZeroPos_END
     DEFW 122  ; enemySpriteOnePos_END 
     DEFW 640  ; enemySpriteZeroPos_CUR
