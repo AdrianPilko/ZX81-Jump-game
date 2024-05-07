@@ -1349,12 +1349,12 @@ checkCollisionAndGoldCollect
     jr noPlayerPosAdjustment
     
 checkAdjustToOneRowHigher
-    ld b, 10
+    ld b, 6
     ld a, (YSpeed)    
     cp 0
     jp nz, noPlayerPosAdjustment
 adjustToOneRowHigher    
-    ld b, 10    
+    ld b, 8    
     ld hl, (currentPlayerLocation) ;; hl is the location to start checking
     ld de, -66
     add hl, de        
@@ -1637,7 +1637,7 @@ GoldCollectColLoop_CC
         inc hl
 GoldCollectColLoop_2_CC              
             ld a, (hl)
-            ld (hl), 128     
+            ;ld (hl), 8  ;; debug     
             inc hl               
             cp 133
             jr z, CollisionWithEnemy_CC
