@@ -1340,13 +1340,14 @@ checkCollisionAndGoldCollect
     jr z, checkAdjustToOneRowHigher    
     jr noPlayerPosAdjustment
     
+    ld b, 6   ; only check 6
 checkAdjustToOneRowHigher
-    ld b, 6
+    ;ld b, 6
     ld a, (YSpeed)    
     cp 0
     jp nz, noPlayerPosAdjustment
 adjustToOneRowHigher    
-    ld b, 8    
+    ;ld b, 6    
     ld hl, (currentPlayerLocation) ;; hl is the location to start checking
     ld de, -66
     add hl, de        
@@ -1365,7 +1366,7 @@ checkForGold
    
     push bc          
     ld b, 8      ; check whole player part of player top row
-        push hl
+    push hl
 GoldCollectColLoop_1  
             
            ; ld (hl), 8        
@@ -1506,7 +1507,7 @@ justPrintScore_GC
 checkForCollision   
     xor a
     ld (hitEnemyRestartRoomFlag), a 
-    
+
     push bc          
         ld b, 4      ; check middle part of player top row
         ;push hl
