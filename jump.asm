@@ -24,8 +24,7 @@
 ;;; https://youtube.com/@byteforever7829
 
 ;;; Known bug(s)
-;;    1) a copy of players feet get left behind after a jump - less than before but still happens mainly on running left or right jumps
-
+;;    1) 
 
 ;some #defines for compatibility with other assemblers
 CLS				equ $0A2A
@@ -946,6 +945,18 @@ executeMoveRoom
     ret 
 
 executeRestartCurrentRoom
+    ld bc, 500
+    ld de, you_hit_enemy_text
+    call printstring
+    ld b, $ff
+delayLoopRestartRoom_0
+    push bc
+        ld  bc, $0f 
+delayLoopRestartRoom_1
+        djnz delayLoopRestartRoom_1
+    pop bc
+    djnz delayLoopRestartRoom_0
+    
     xor a
     ld (moveRoomFlag), a  ; first thing clear this flag otherwise continually move room :)
     ld (hitEnemyRestartRoomFlag), a    
@@ -3138,7 +3149,8 @@ moveRoomDebugFlagText
 YouWonText
     DEFB _Y,_O,_U,__,_W,_O,_N,__,_N,_O,_W,__,__,_D,_A,_N,_C,_E,_CL,_MI,_CP,_CP,_CP,$ff    
 
-
+you_hit_enemy_text
+    DEFB    23,23,23,23, _Y,_O,_U,0,_D,_I,_E,_D,_CM,0,_C,_A,_R,_E,_F,_U,_L,23,23,23,23,$ff
 title_screen_txt
 	DEFB	_Z,_X,_8,_1,__,_J,_U,_M,_P,$ff
 keys_screen_txt_1
@@ -3156,7 +3168,7 @@ high_Score_txt
 credits_and_version_1
 	DEFB __,_B,_Y,__,_A,__,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,__, _2,_0,_2,_4,$ff
 credits_and_version_2
-	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_5,_DT,_2,$ff    
+	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_5,_DT,_3,$ff    
 credits_and_version_3
 	DEFB __,__,__,_Y,_O,_U,_T,_U,_B,_E,_CL, _B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff       
     
