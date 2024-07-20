@@ -190,7 +190,11 @@ Line1Text:      DEFB $ea                        ; REM
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    xor a
+    ld (high_score_hund), a
+    ld (high_score_tens), a
 	jp intro_title		; main entry poitn to the code ships the memory definitions
+    
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 introWaitLoop
 	ld b,64
@@ -272,14 +276,16 @@ intro_title
 	ld de,game_objective_txt
 	call printstring	
 	ld bc,436
-	ld de,last_Score_txt
+	ld de,high_Score_txt
 	call printstring	
 	
     ld bc, 476
-    ld de, last_score_mem_hund ; load address of hundreds
+    ;ld de, last_score_mem_hund ; load address of hundreds
+    ld de, high_score_hund
 	call printNumber    
 	ld bc, 478			; bc is offset from start of display
-	ld de, last_score_mem_tens ; load address of  tens		
+	;ld de, last_score_mem_tens ; load address of  tens		
+    ld de, high_score_tens
 	call printNumber	
 	ld bc,537	
 	ld de,credits_and_version_1
@@ -1498,6 +1504,39 @@ addOneToHund
 	daa                                   ; z80 daa instruction realigns for BCD after add or subtract
 	ld (score_mem_hund), a
 skipAddHund	
+
+; compare with high score and set that if higher
+
+    ld a, (score_mem_hund)
+    ld b,a     ; load the second 8-bit number into register b (via a)
+    ld a, (high_score_hund)   ; load the first 8-bit number into register a
+    cp b            ; compare a with the second 8-bit number (in register b)
+    jr c, setHighScore ; jump if carry flag is set (high_score_hund < score_mem_hund)
+
+    ; check if equal, and if so then check the tens, could be 00 50, or 01 50 in high score and current score
+    jr z, highScoreHundEqualCheckTens
+    ; high_score_hund > score_mem_hund so don't set
+    jr skipCheckRestHighScore
+
+highScoreHundEqualCheckTens
+    ld a, (score_mem_tens)
+    ld b, a
+    ld a, (high_score_tens)
+    cp b
+    jp c, setHighScore ; jump if carry flag is set (a < b)
+
+    jr skipCheckRestHighScore
+
+setHighScore
+    ld a, (score_mem_tens)
+    ld (high_score_tens), a
+    ld a, (score_mem_hund)
+    ld (high_score_hund), a
+    jr skipCheckRestHighScore
+
+skipCheckRestHighScore
+
+
     pop bc 
     djnz incGoldScoreLoop
 justPrintScore_GC
@@ -3140,6 +3179,10 @@ landPlayerFlag
 score_mem_tens
     DEFB 0
 score_mem_hund
+    DEFB 0
+high_score_tens
+    DEFB 0
+high_score_hund
     DEFB 0
 last_score_mem_tens
     DEFB 0
