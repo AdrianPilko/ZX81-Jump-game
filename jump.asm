@@ -641,6 +641,17 @@ spriteNextRight
     jp updateRestOfScreen 
     
 doJump      ; triggered when jump key pressed just sets the YSpeed      
+
+    ld hl, (currentPlayerLocation)
+    ld de, 231
+    add hl, de
+    ld b, 8
+    ;; stop feet left behind"
+loopFootBlank    
+    ld (hl), 0
+    inc hl    
+    djnz loopFootBlank    
+
     ld a, 1 
     ld (noJumpInNextGameLoopFlag), a
     ld a, (groundPlatFlag)   ;; this is so you can only jump off a platform
@@ -1604,6 +1615,8 @@ GoldCollectColLoop_CC
    ;;; check YSpeed , if > 0 then wipe the line below and don't check for enemy or gold
    ;; YSpeed is only ever non zero when player moving up, not when moving down
    ld a, (YSpeed)
+   cp 6 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
+   jr z, blankBotInCheckCollision_CC   
    cp 5 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
    jr z, blankBotInCheckCollision_CC   
    cp 4 ;; this means we have just jumped so jp blankBottomRowInCheckCollision
