@@ -34,8 +34,8 @@ CLS				equ $0A2A
 ;#define DEBUG_SPRITE_ADDRESS 1
 ;#define DEBUG_PRINT_ROOM_NUMBER 1
 ;#define DEBUG_MULTIRATECOUNT 1
-;#define DEBUG_START_IN_ROOM_X   1
-;#define DEBUG_ROOM_TO_START_IN 7
+;DEBUG_START_IN_ROOM_X   equ 1
+;DEBUG_ROOM_TO_START_IN equ 14
 ;#define DEBUG_COLLISION_DETECT_1 1
 ;#define DEBUG_COLLISION_DETECT_2 1
 
@@ -66,7 +66,7 @@ ARROW_END_INTRO               equ 66
 
 
 
-LAST_ROOM                     equ 14
+LAST_ROOM                     equ 15
 
 SIZE_OF_ROOM_CONFIG           equ Room_2_Config-Room_1_Config    
 OFFSET_TO_TREASURE            equ startOfRoom1Treasure-Room_1_Config
@@ -3168,7 +3168,7 @@ high_Score_txt
 credits_and_version_1
 	DEFB __,_B,_Y,__,_A,__,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,__, _2,_0,_2,_4,$ff
 credits_and_version_2
-	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_5,_DT,_3,$ff    
+	DEFB __,__,_V,_E,_R,_S,_I,_O,_N,__,_V,_1,_DT,_5,_DT,_4,$ff    
 credits_and_version_3
 	DEFB __,__,__,_Y,_O,_U,_T,_U,_B,_E,_CL, _B,_Y,_T,_E,_F,_O,_R,_E,_V,_E,_R,$ff       
     
@@ -4212,9 +4212,76 @@ Room_2_Config
     DEFB 14        ;; Y position bottom is 0
     DEFW 134      ;; screen memory offset
     DEFB _J,_U,_S,_T,__,_R,_U,_N,__,__,$ff        
-    
-    
+
+
+
     DEFB 14    ; room ID   
+    ;;; DOORS  * 3 max enabled  
+    DEFB 1    ; Door orientation east=1  0= door disabled
+    DEFW 196   ; offset from DF_CC to top of door
+    DEFB 8    ; 9 blocks high
+    DEFB 1    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one
+    DEFB 0    ; Door orientation east=1  0= door disabled
+    DEFW 0   ; offset from DF_CC to top of door
+    DEFB 0    ; 9 blocks high
+    DEFB 0    ; ID of next room from this one  (byte 15)
+    ;;; platforms max = 3 enabled            
+    
+    DEFB 1    ; character of platform 0 = disabled  (byte16)
+    DEFW 448  ; start of platform   17,18
+    DEFB 6    ; length   
+    
+    DEFB 1    ; character of platform 0 = disabled  20
+    DEFW 480  ; start of platform  21,22
+    DEFB 8    ; length  23
+    
+    DEFB 1    ; character of platform 0 = disabled  24
+    DEFW 512  ; start of platform  25,26
+    DEFB 10    ; length             (byte 27)
+    
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 397  ; start of platform  25,26
+    DEFB 13    ; length             (byte 27)        
+    
+    DEFB 1    ; 1 = enabled 0 = disabled  
+    DEFW 570  ; start of platform  25,26
+    DEFB 8    ; length             (byte 27)
+
+    ;;; tokens 2 bytes each
+    DEFW 286  ; treasure token offset from DF_CC   always 4 treasure (byte 28)
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 288  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 290  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    DEFW 292  ; treasure token offset from DF_CC
+    DEFB 1    ; is the trreasure enabled or not - used when 
+    
+    DEFW 642  ; enemySpriteZeroPos_ST 
+    DEFW 100  ; enemySpriteOnePos_ST  
+    DEFW 653  ; enemySpriteZeroPos_END
+    DEFW 126  ; enemySpriteOnePos_END 
+    DEFW 644  ; enemySpriteZeroPos_CUR
+    DEFW 113  ; enemySpriteOnePos_CUR 
+    DEFW 1    ; enemySpriteZeroPos_DIR
+    DEFW 1    ; enemySpriteOnePos_DIR 
+    DEFB 1   ; enemy 0 full rate enemy = 1; half rate = 0
+    DEFB 1    ; enemy 1 full rate enemy = 1; half rate = 0      
+    DEFW enemySpriteSeven
+    DEFW enemySpriteSix       
+    DEFB  0  ; enemy zero orientation horizontal = 0 vertical = 1
+    DEFB  1  ; enemy one orientation horizontal = 0 vertical = 1   
+    DEFB 5        ;; X position left most is zero
+    DEFB 3        ;; Y position bottom is 0
+    DEFW 467      ;; screen memory offset    
+    DEFB _I,_N,_V,_O,_L,_U,_T,_E,__,__,$ff
+
+    
+    DEFB 15    ; room ID   
     ;;; DOORS  * 3 max enabled  
     DEFB 1    ; Door orientation east=1  0= door disabled
     DEFW 196   ; offset from DF_CC to top of door
